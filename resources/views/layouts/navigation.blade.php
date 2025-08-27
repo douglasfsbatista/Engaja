@@ -1,6 +1,10 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
   <div class="container">
-    <a class="navbar-brand text-primary" href="{{ url('/') }}">Engaja</a>
+    {{-- Logo + texto --}}
+    <a class="navbar-brand d-flex align-items-center text-engaja fw-bold" href="{{ url('/') }}">
+      <img src="{{ asset('images/engaja-bg.png') }}" alt="Logo Engaja"
+           class="me-2" style="height:40px;">
+    </a>
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
       <span class="navbar-toggler-icon"></span>
@@ -21,11 +25,12 @@
           @endif
         @else
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+            <a class="nav-link dropdown-toggle" href="#" role="button"
+               data-bs-toggle="dropdown" aria-expanded="false">
               {{ Auth::user()->name }}
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Perfil</a></li>
+              <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Meu perfil</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
                 <form method="POST" action="{{ route('logout') }}">

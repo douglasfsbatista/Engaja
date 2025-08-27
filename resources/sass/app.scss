@@ -10,7 +10,6 @@ $engaja-yellow: #FDB913;
 $engaja-pink:   #E62270;
 $engaja-green:  #2EB57D;
 
-/* Bootstrap core tokens (precisa vir ANTES do import principal) */
 $font-family-sans-serif: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif !default;
 $primary:   $engaja-purple;
 $secondary: $engaja-blue;
@@ -24,11 +23,8 @@ $body-bg: #ffffff;
 $border-radius: .6rem;
 $border-radius-lg: .8rem;
 
-/* ---- IMPORTA FUNÇÕES/VARIÁVEIS do Bootstrap ---- */
-@import "bootstrap/scss/functions";
-@import "bootstrap/scss/variables";
+@import "bootstrap/scss/bootstrap";
 
-/* Agora sim é seguro usar $theme-colors */
 $theme-colors: map-merge(
   $theme-colors,
   (
@@ -40,24 +36,6 @@ $theme-colors: map-merge(
   )
 );
 
-/* Continua o resto dos imports */
-@import "bootstrap/scss/maps";
-@import "bootstrap/scss/mixins";
-@import "bootstrap/scss/utilities";
-@import "bootstrap/scss/root";
-@import "bootstrap/scss/reboot";
-@import "bootstrap/scss/type";
-@import "bootstrap/scss/images";
-@import "bootstrap/scss/containers";
-@import "bootstrap/scss/grid";
-@import "bootstrap/scss/helpers";
-@import "bootstrap/scss/buttons";
-@import "bootstrap/scss/nav";
-@import "bootstrap/scss/navbar";
-@import "bootstrap/scss/card";
-@import "bootstrap/scss/forms";
-@import "bootstrap/scss/tables";
-@import "bootstrap/scss/utilities/api";
 
 /* Custom utilities */
 .text-engaja     { color: $engaja-purple !important; }
