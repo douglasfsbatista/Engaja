@@ -118,6 +118,6 @@ class EventoController extends Controller
         }
 
         $evento->delete();
-        return back()->with('success','Evento excluído.');
+        return redirect()->route('eventos.index')->with('success','Evento excluído.');
     }
 }
