@@ -17,6 +17,9 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             EixoSeeder::class,
+            RegiaoSeeder::class,
+            EstadoSeeder::class,
+            MunicipioSeeder::class,
         ]);
     }
 }
