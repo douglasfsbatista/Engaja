@@ -4,7 +4,8 @@ namespace App\Imports;
 
 use App\Models\Participante;
 use App\Models\User;
-use App\Models\Municipio; // ajuste se necessário
+use App\Models\Municipio;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Carbon;
@@ -14,12 +15,15 @@ use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 
 class ParticipantesImport implements ToModel, WithHeadingRow, SkipsEmptyRows
 {
-    protected int $eventoId;
 
-    public function __construct(int $eventoId)
+    public Collection $importados;
+
+    public function __construct()
     {
-        $this->eventoId = $eventoId;
+        // Inicializa como uma nova Collection vazia
+        $this->importados = new Collection();
     }
+
 
     public function headingRow(): int
     {
@@ -29,6 +33,7 @@ class ParticipantesImport implements ToModel, WithHeadingRow, SkipsEmptyRows
     public function model(array $row)
     {
         // 🔹 Tenta achar município, mas se não encontrar, deixa null
+        // TODO melhorar performance evitando consulta a cada linha
         $municipioId = null;
         if (!empty($row['municipio'])) {
             $municipio = Municipio::whereRaw('LOWER(nome) = ?', [mb_strtolower(trim($row['municipio']))])->first();
@@ -59,10 +64,9 @@ class ParticipantesImport implements ToModel, WithHeadingRow, SkipsEmptyRows
             }
         }
 
-        // 🔹 Cria ou atualiza participante (não duplica por evento+user)
-        return Participante::updateOrCreate(
+        // 🔹 Cria ou atualiza participante
+        $participante = Participante::updateOrCreate(
             [
-                'evento_id' => $this->eventoId,
                 'user_id'   => $user->id,
             ],
             [
@@ -73,5 +77,9 @@ class ParticipantesImport implements ToModel, WithHeadingRow, SkipsEmptyRows
                 'data_entrada'   => $dataEntrada,
             ]
         );
+
+        $this->importados->push($participante);
+
+        return $participante;
     }
 }

@@ -36,9 +36,11 @@ class InscricaoController extends Controller
         ]);
 
         try {
-            // Passamos o ID do evento para o import para vincular cada participante
-            Excel::import(new ParticipantesImport($evento->id), $request->file('your_file'));
-
+            $import = new ParticipantesImport;
+            Excel::import($import, $request->file('your_file'));
+            $participantes = $import->importados;
+            // Sincroniza participantes com o evento (adiciona novos, mantém os antigos)
+            $evento->participantes()->attach($participantes->modelKeys());
             return redirect()
                 ->route('eventos.show', $evento)
                 ->with('success', 'Participantes importados com sucesso!');
