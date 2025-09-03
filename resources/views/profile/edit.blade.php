@@ -112,7 +112,7 @@
                             </div>
 
                             {{-- Telefone --}}
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label for="telefone" class="form-label">Telefone</label>
                                 <input id="telefone" type="text" name="telefone"
                                     inputmode="numeric" autocomplete="tel"
