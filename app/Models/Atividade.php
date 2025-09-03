@@ -16,5 +16,10 @@ class Atividade extends Model
     {
         return $this->belongsTo(Evento::class);
     }
+
+    public function presencas()
+    {
+        return $this->hasMany(Presenca::class);
+    }
 }
 
