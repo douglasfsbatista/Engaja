@@ -47,13 +47,13 @@
     <table class="table table-sm align-middle table-bordered bg-white">
       <thead class="table-light">
         <tr>
-          <th style="width:70px;">#ID</th>
+          <!-- <th style="width:70px;">#ID</th> -->
           <th>Nome</th>
           <th>Email</th>
           <th style="min-width:120px;">CPF</th>
           <th style="min-width:120px;">Telefone</th>
           <th style="min-width:220px;">Município</th>
-          <th style="min-width:140px;">Data entrada</th>
+          <!-- <th style="min-width:140px;">Data entrada</th> -->
           <th style="min-width:160px;">Inscrito em</th>
           {{-- Opcional: ações (ver, remover, etc.) --}}
           {{-- <th style="width:110px;">Ações</th> --}}
@@ -62,7 +62,7 @@
       <tbody>
         @forelse($inscritos as $p)
           <tr>
-            <td>{{ $p->id }}</td>
+            <!-- <td>{{ $p->id }}</td> -->
             <td>{{ $p->user->name ?? '-' }}</td>
             <td>{{ $p->user->email ?? '-' }}</td>
             <td>{{ $p->cpf ?? '-' }}</td>
@@ -74,7 +74,7 @@
                 —
               @endif
             </td>
-            <td>{{ $p->data_entrada ?? '—' }}</td>
+            <!-- <td>{{ $p->data_entrada ?? '—' }}</td> -->
             <td>
               {{-- se você definiu ->as('inscricao') na relação --}}
               {{ optional($p->inscricao->created_at ?? $p->pivot->created_at ?? null)->format('d/m/Y H:i') ?? '—' }}
