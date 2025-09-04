@@ -296,6 +296,70 @@ class InscricaoController extends Controller
         ]);
     }
 
+
+    public function inscrever(Request $request, \App\Models\Evento $evento)
+    {
+        $user = $request->user();
+        $participante = $user->participante; // já existe pelo booted()
+
+        // existe ativo?
+        $exists = \DB::table('inscricaos')
+            ->where('evento_id', $evento->id)
+            ->where('participante_id', $participante->id)
+            ->whereNull('deleted_at')
+            ->exists();
+
+        if ($exists) {
+            return back()->with('info', 'Você já está inscrito neste evento.');
+        }
+
+        // já existiu (soft-deletada)? restaura
+        $restored = \DB::table('inscricaos')
+            ->where('evento_id', $evento->id)
+            ->where('participante_id', $participante->id)
+            ->whereNotNull('deleted_at')
+            ->update(['deleted_at' => null, 'updated_at' => now()]);
+
+        if ($restored) {
+            return back()->with('success', 'Inscrição reativada com sucesso!');
+        }
+
+        // cria nova
+        \DB::table('inscricaos')->insert([
+            'evento_id'       => $evento->id,
+            'participante_id' => $participante->id,
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+
+        return back()->with('success', 'Inscrição realizada com sucesso!');
+    }
+
+    public function cancelar(Request $request, Evento $evento)
+    {
+        $user = $request->user();
+        $participanteId = optional($user->participante)->id;
+
+        if (!$participanteId) {
+            return back()->with('error', 'Você não possui cadastro de participante.');
+        }
+
+        $affected = DB::table('inscricaos')
+            ->where('evento_id', $evento->id)
+            ->where('participante_id', $participanteId)
+            ->whereNull('deleted_at')
+            ->update([
+                'deleted_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        if ($affected) {
+            return back()->with('success', 'Inscrição cancelada.');
+        }
+
+        return back()->with('info', 'Você não está inscrito neste evento.');
+    }
+
     public function create()
     { /* ... */
     }

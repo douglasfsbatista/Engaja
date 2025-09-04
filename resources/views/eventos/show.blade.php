@@ -149,7 +149,17 @@
             class="img-fluid rounded" alt="Capa do evento">
         </div>
       </div>
-
+      @php
+        $participanteId = optional(auth()->user()?->participante)->id;
+        $jaInscrito = false;
+        if ($participanteId) {
+            $jaInscrito = \Illuminate\Support\Facades\DB::table('inscricaos')
+                ->where('evento_id', $evento->id)
+                ->where('participante_id', $participanteId)
+                ->whereNull('deleted_at')
+                ->exists();
+        }
+      @endphp
       <div class="col-md-7">
         <h1 class="h3 fw-bold text-engaja mb-2">{{ $evento->nome }}</h1>
 
@@ -177,6 +187,28 @@
           @if($evento->link)
             <a href="{{ $evento->link }}" target="_blank" class="btn btn-outline-secondary">Acessar link</a>
           @endif
+
+          @auth
+            @if($participanteId)
+              @if(!$jaInscrito)
+                <form method="POST" action="{{ route('inscricoes.inscrever', $evento) }}">
+                  @csrf
+                  <button class="btn btn-engaja">Inscrever-me</button>
+                </form>
+              @else
+                <form method="POST" action="{{ route('inscricoes.cancelar', $evento) }}"
+                      onsubmit="return confirm('Deseja cancelar sua inscrição?');">
+                  @csrf @method('DELETE')
+                  <button class="btn btn-outline-danger">Cancelar minha inscrição</button>
+                </form>
+              @endif
+            @else
+              <a href="{{ route('profile.edit') }}" class="btn btn-outline-primary"
+                title="Complete seu cadastro de participante para se inscrever">
+                Completar cadastro para se inscrever
+              </a>
+            @endif
+          @endauth
 
           @hasanyrole('administrador|formador')
           <a href="{{ route('inscricoes.import', $evento)}}" class="btn btn-engaja">Inscrever participantes</a>

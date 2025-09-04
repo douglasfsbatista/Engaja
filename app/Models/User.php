@@ -53,4 +53,15 @@ class User extends Authenticatable
     {
         return $this->hasOne(Participante::class, 'user_id');
     }
+    protected static function booted(): void
+    {
+        static::created(function (User $user) {
+            $user->participante()->firstOrCreate(['user_id' => $user->id], [
+                'cpf'            => null,
+                'telefone'       => null,
+                'municipio_id'   => null,
+                'escola_unidade' => null,
+            ]);
+        });
+    }
 }
