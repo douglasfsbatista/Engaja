@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Evento extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'user_id',
@@ -36,5 +37,13 @@ class Evento extends Model
     public function atividades()
     {
         return $this->hasMany(Atividade::class);
+    }
+
+    public function inscricoes(){
+        return $this->hasMany(Inscricao::class);
+    }
+
+    public function participantes(){
+        return $this->belongsToMany(Participante::class, 'inscricaos')->withTimestamps();
     }
 }

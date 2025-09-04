@@ -28,6 +28,7 @@ class AtividadeController extends Controller
         $this->authorize('update', $evento);
 
         $dados = $request->validate([
+            'descricao'     => 'required|string',
             'dia'           => 'required|date',
             'hora_inicio'   => 'required|date_format:H:i',
             'carga_horaria' => 'required|integer|min:1',
@@ -54,6 +55,7 @@ class AtividadeController extends Controller
         $this->authorize('update', $evento);
 
         $dados = $request->validate([
+            'descricao'     => 'required|string',
             'dia'           => 'required|date',
             'hora_inicio'   => 'required|date_format:H:i',
             'carga_horaria' => 'required|integer|min:1',
@@ -74,5 +76,12 @@ class AtividadeController extends Controller
         $atividade->delete();
 
         return back()->with('success','Atividade removida.');
+    }
+
+    public function show(Atividade $atividade)
+    {
+        $atividade->load('evento.participantes.user','presencas.inscricao.participante.user');
+
+        return view('atividades.show', compact('atividade'));
     }
 }

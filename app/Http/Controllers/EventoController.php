@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Imports\ParticipantesImport;
+use \Maatwebsite\Excel\Facades\Excel;
 
 class EventoController extends Controller
 {
@@ -17,10 +19,11 @@ class EventoController extends Controller
     {
         $q = Evento::with(['eixo','user'])
             ->when($r->q, function ($qq) use ($r) {
-                $qq->where(function ($w) use ($r) {
-                    $w->where('nome', 'ilike', '%'.$r->q.'%')
-                      ->orWhere('tipo', 'ilike', '%'.$r->q.'%')
-                      ->orWhere('objetivo', 'ilike', '%'.$r->q.'%');
+                $search = mb_strtolower($r->q);
+                $qq->where(function ($w) use ($search) {
+                    $w->whereRaw('LOWER(nome) LIKE ?', ['%'.$search.'%'])
+                      ->orWhereRaw('LOWER(tipo) LIKE ?', ['%'.$search.'%'])
+                      ->orWhereRaw('LOWER(objetivo) LIKE ?', ['%'.$search.'%']);
                 });
             })
             ->when($r->eixo, fn($qq) => $qq->where('eixo_id', $r->eixo))
@@ -118,6 +121,11 @@ class EventoController extends Controller
         }
 
         $evento->delete();
-        return back()->with('success','Evento excluído.');
+        return redirect()->route('eventos.index')->with('success','Evento excluído.');
     }
+
+    // public function inscrever_participantes(Request $request, Evento $evento){
+    //     $collection = (new ParticipantesImport)->toCollection(request()->file('your_file'));
+    //     $evento->participantes()->saveMany($collection);
+    // }
 }

@@ -179,7 +179,11 @@
         <a href="{{ $evento->link }}" target="_blank" class="btn btn-outline-secondary">Acessar link</a>
         @endif
 
-        <a href="#" class="btn btn-engaja">Inscrever-se</a>
+        <a href="{{ route('inscricoes.import', $evento)}}" class="btn btn-engaja">Inscrever participantes</a>
+
+        <a href="{{ route('inscricoes.inscritos', $evento) }}" class="btn btn-outline-primary">
+          Ver inscritos
+        </a>
 
         @can('update', $evento)
         <a href="{{ route('eventos.edit', $evento) }}" class="btn btn-outline-secondary">Editar</a>
@@ -195,6 +199,9 @@
   </div>
 
   {{-- Chips --}}
+  @php
+  $totalInscritos = $evento->participantes()->wherePivotNull('deleted_at')->count();
+  @endphp
   <div class="mb-4">
     <div class="d-flex flex-wrap gap-2">
       @if($evento->eixo?->nome)
@@ -209,13 +216,14 @@
       @if($evento->modalidade)
       <span class="ev-chip">Modalidade: <strong class="ms-1">{{ $evento->modalidade }}</strong></span>
       @endif
+      <span class="ev-chip">Inscritos: <strong class="ms-1">{{ $totalInscritos }}</strong></span>
     </div>
   </div>
 
   {{-- Descrição / Objetivo --}}
   @if($evento->resumo)
   <div class="mb-4">
-    <h2 class="h5 fw-bold mb-2">Descrição do Evento</h2>
+    <h2 class="h5 fw-bold mb-2">Descrição</h2>
     <div class="ev-card p-3">
       <p class="mb-0">{{ $evento->resumo }}</p>
     </div>
@@ -224,7 +232,7 @@
 
   @if($evento->objetivo)
   <div class="mb-4">
-    <h2 class="h5 fw-bold mb-2">Objetivos do Evento</h2>
+    <h2 class="h5 fw-bold mb-2">Objetivos</h2>
     <div class="ev-card p-3">
       <p class="mb-0">{{ $evento->objetivo }}</p>
     </div>
@@ -246,10 +254,10 @@
       @can('update', $evento)
       <div class="d-flex gap-2">
         <a href="{{ route('eventos.atividades.create', $evento) }}" class="btn btn-engaja btn-sm">
-          + Nova atividade
+          + Novo momento
         </a>
         <a href="{{ route('eventos.atividades.index', $evento) }}" class="btn btn-outline-secondary btn-sm">
-          Ver todas
+          Ver todos
         </a>
       </div>
       @endcan
@@ -278,22 +286,22 @@
       @if($porDia->isEmpty())
       <div class="empty-state">
         <div class="mb-1" style="font-size:1.6rem">🗓️</div>
-        Nenhuma atividade cadastrada ainda.
+        Nenhum momento cadastrado ainda.
       </div>
       @else
       @foreach($dias as $i => $dia)
       @php $lista = $porDia[$dia]; @endphp
-      <div class="tab-pane fade {{ $i===0 ? 'show active' : '' }}" id="pane-{{ $i }}" role="tabpanel" aria-labelledby="tab-{{ $i }}">
+
+      <div class="tab-pane fade {{ $i===0 ? 'show active' : '' }}"
+        id="pane-{{ $i }}" role="tabpanel" aria-labelledby="tab-{{ $i }}">
         <div class="timeline">
           @foreach($lista as $at)
           @php
-          $ini = Carbon::parse($at->hora_inicio)->format('H:i');
-          $fim = !empty($at->hora_fim) ? Carbon::parse($at->hora_fim)->format('H:i') : null;
-          $titulo= $at->titulo ?? 'Atividade';
+          $ini = \Carbon\Carbon::parse($at->hora_inicio)->format('H:i');
+          $fim = !empty($at->hora_fim) ? \Carbon\Carbon::parse($at->hora_fim)->format('H:i') : null;
+          $momento = trim($at->descricao ?? '') !== '' ? $at->descricao : 'Momento';
           $local = $at->local ?? null;
           $ch = $at->carga_horaria ?? null;
-          $descr = $at->descricao ?? null;
-          $tipo = $at->tipo ?? null;
           @endphp
 
           <div class="t-item">
@@ -301,35 +309,35 @@
             <div class="program-card">
               <div class="d-flex justify-content-between align-items-start gap-3">
                 <div>
+                  {{-- Hora --}}
                   <div class="program-time">{{ $ini }}{{ $fim ? ' – '.$fim : '' }}</div>
-                  <div class="program-title">{{ $titulo }}</div>
 
+                  {{-- Momento (descricao) como título principal --}}
+                  <div class="program-title">{{ $momento }}</div>
+
+                  {{-- Meta opcional: Local e Carga horária --}}
+                  @if($local || $ch)
                   <div class="program-meta">
-                    @if($local)<span class="chip">📍 {{ $local }}</span>@endif
                     @if($ch)<span class="chip">⏱️ {{ $ch }}h</span>@endif
-                    @if($tipo)<span class="chip">🏷️ {{ $tipo }}</span>@endif
                   </div>
-
-                  @if($descr)
-                  <p class="mt-2 mb-0 text-muted small">{{ $descr }}</p>
                   @endif
                 </div>
 
                 @can('update', $evento)
                 <div class="actions d-flex gap-2">
+                  <a href="{{ route('atividades.show', $at) }}" class="btn btn-sm btn-outline-primary">
+                      Ver
+                  </a>
                   <a href="{{ route('atividades.edit', $at) }}" class="btn btn-sm btn-outline-secondary">
                     Editar
                   </a>
                   <form action="{{ route('atividades.destroy', $at) }}" method="POST"
-                    onsubmit="return confirm('Excluir atividade?');" class="d-inline">
+                    onsubmit="return confirm('Excluir momento?');" class="d-inline">
                     @csrf @method('DELETE')
-                    <button class="btn btn-sm btn-outline-danger">
-                      Excluir
-                    </button>
+                    <button class="btn btn-sm btn-outline-danger">Excluir</button>
                   </form>
                 </div>
                 @endcan
-
               </div>
             </div>
           </div>
@@ -337,6 +345,7 @@
         </div>
       </div>
       @endforeach
+ 
       @endif
     </div>
   </div>
