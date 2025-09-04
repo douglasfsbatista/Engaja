@@ -31,18 +31,20 @@ class RolesPermissionsSeeder extends Seeder
         $formador     = Role::firstOrCreate(['name' => 'formador', 'guard_name' => 'web']);
         $participante = Role::firstOrCreate(['name' => 'participante', 'guard_name' => 'web']);
 
-        // ADMIN: adm de usuários
         $admin->syncPermissions([
             'user.ver','user.criar','user.editar','user.excluir',
             'participante.ver','participante.criar','participante.editar','participante.excluir',
+            'evento.ver','evento.criar','evento.editar','evento.excluir',
+            'inscricao.ver','inscricao.criar','inscricao.editar','inscricao.excluir',
+            'presenca.registrar', 'relatorio.ver',
         ]);
 
-        // GESTOR: acesso aos relatórios
+        // GESTOR
         $gestor->syncPermissions([
             'relatorio.ver',
         ]);
 
-        // FORMADOR: cadastro e gerenciamento dos eventos
+        // FORMADOR
         $formador->syncPermissions([
             'evento.ver','evento.criar','evento.editar','evento.excluir',
             'participante.ver','participante.criar','participante.editar','participante.excluir',
@@ -50,7 +52,7 @@ class RolesPermissionsSeeder extends Seeder
             'presenca.registrar', 
         ]);
 
-        // PARTICIPANTE: consumo e ações do próprio contexto
+        // PARTICIPANTE
         $participante->syncPermissions([
             'evento.ver',
             'inscricao.ver','inscricao.criar',
