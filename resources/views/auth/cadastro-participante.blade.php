@@ -21,6 +21,7 @@
                             @csrf
 
                             <input type="hidden" name="evento_id" value="{{ $evento->id }}">
+                            <input type="hidden" name="atividade_id" value="{{ $atividade->id }}">
 
                             <div class="card shadow-sm mb-3">
                                 <div class="card-header bg-white">
