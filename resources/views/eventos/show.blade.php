@@ -371,18 +371,18 @@
                       </div>
                       @endif
                     </div>
-
+                    @hasanyrole('administrador|formador')
                     <div class="actions d-flex gap-2">
                       <a href="{{ route('atividades.show', $at) }}" class="btn btn-sm btn-outline-primary">Ver</a>
-                      @hasanyrole('administrador|formador')
+                      
                       <a href="{{ route('atividades.edit', $at) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
                       <form action="{{ route('atividades.destroy', $at) }}" method="POST"
                         onsubmit="return confirm('Excluir momento?');" class="d-inline">
                         @csrf @method('DELETE')
                         <button class="btn btn-sm btn-outline-danger">Excluir</button>
                       </form>
-                      @endhasanyrole
                     </div>
+                    @endhasanyrole
                   </div>
                 </div>
               </div>
