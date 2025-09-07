@@ -18,7 +18,9 @@
                   <div class="text-danger mt-1">{{ $message }}</div>
                 @enderror
               </div>
-              <button type="submit" class="btn btn-primary">Confirmar Presença</button>
+              <div class="d-flex justify-content-end">
+                <button type="submit" class="btn btn-primary">Confirmar Presença</button>
+              </div>
 
               {{-- @if (session('show_register_button') && session('error'))
                   <a class="btn btn-outline-primary float-end"
