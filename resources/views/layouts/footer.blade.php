@@ -13,8 +13,8 @@
 
       <div class="col-md-4 d-flex flex-column align-items-center">
         <a href="{{ route('eventos.index') }}" class="mb-2 text-decoration-none text-white fw-semibold link-hover">Ações pedagógicas</a>
-        <a href="#" class="mb-2 text-decoration-none text-white fw-semibold link-hover">Funcionalidade 1</a>
-        <a href="#" class="mb-2 text-decoration-none text-white fw-semibold link-hover">Funcionalidade 2</a>
+<!--    <a href="#" class="mb-2 text-decoration-none text-white fw-semibold link-hover">Funcionalidade 1</a>
+        <a href="#" class="mb-2 text-decoration-none text-white fw-semibold link-hover">Funcionalidade 2</a> -->
       </div>
     </div>
 
