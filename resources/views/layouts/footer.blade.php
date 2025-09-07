@@ -4,18 +4,17 @@
     <!-- Logo + Links  -->
     <div class="row text-center text-md-start align-items-center justify-content-center g-4">
       <!-- Logo -->
-      <div class="col-md-4 d-flex flex-column align-items-center">
-        <img src="{{ asset('images/engaja-bg-white.png') }}" alt="Engaja" style="height:48px">
+      <div class="col-md-6 d-flex flex-column align-items-center">
+        <img src="{{ asset('images/logo-alfaeja.svg') }}" alt="Logo ALFA-EJA Brasil" style="height:48px">
         <p class="text-white-50 mt-2 mb-0 text-center">
           Sistema de Gestão de Participação e Engajamento.
         </p>
       </div>
-
-      <div class="col-md-4 d-flex flex-column align-items-center">
-        <a href="{{ route('eventos.index') }}" class="mb-2 text-decoration-none text-white fw-semibold link-hover">Ações pedagógicas</a>
-<!--    <a href="#" class="mb-2 text-decoration-none text-white fw-semibold link-hover">Funcionalidade 1</a>
-        <a href="#" class="mb-2 text-decoration-none text-white fw-semibold link-hover">Funcionalidade 2</a> -->
-      </div>
+      @can('evento.criar')
+        <div class="col-md-6 d-flex flex-column align-items-center">
+          <a href="{{ route('eventos.index') }}" class="mb-2 text-decoration-none text-white fw-semibold link-hover">Ações pedagógicas</a>
+        </div>
+      @endcan
     </div>
 
     <hr class="my-4 border-light">

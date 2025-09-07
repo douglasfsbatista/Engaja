@@ -145,7 +145,7 @@
   <div class="row g-4 align-items-center mb-4">
     <div class="col-md-5">
       <div class="ev-card bg-light p-4 text-center">
-        <img src="{{ $evento->imagem ? asset('storage/' . $evento->imagem) : asset('images/engaja-bg.png') }}"
+        <img src="{{ $evento->imagem ? asset('storage/' . $evento->imagem) : asset('images/logo-aeb.png') }}"
           class="img-fluid rounded" alt="Capa do evento">
       </div>
     </div>
@@ -371,18 +371,18 @@
                       </div>
                       @endif
                     </div>
-
+                    @hasanyrole('administrador|formador')
                     <div class="actions d-flex gap-2">
                       <a href="{{ route('atividades.show', $at) }}" class="btn btn-sm btn-outline-primary">Ver</a>
-                      @hasanyrole('administrador|formador')
+                      
                       <a href="{{ route('atividades.edit', $at) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
                       <form action="{{ route('atividades.destroy', $at) }}" method="POST"
                         onsubmit="return confirm('Excluir momento?');" class="d-inline">
                         @csrf @method('DELETE')
                         <button class="btn btn-sm btn-outline-danger">Excluir</button>
                       </form>
-                      @endhasanyrole
                     </div>
+                    @endhasanyrole
                   </div>
                 </div>
               </div>

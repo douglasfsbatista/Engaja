@@ -128,6 +128,7 @@ $dia = \Carbon\Carbon::parse($atividade->dia)
     </div>
   </div>
 
+  @auth
   {{-- QR Code de presença --}}
   <div class="mb-4">
     <h2 class="h6 fw-bold mb-2">Confirmação de presença (QR)</h2>
@@ -139,13 +140,13 @@ $dia = \Carbon\Carbon::parse($atividade->dia)
               ->color(129,18,131)
               ->eye('circle')
               ->eyeColor(0, 0,156,209,0,156,209)
-              ->eyeColor(1, 0,190,175,0,190,175)
+              ->eyeColor(1, 44,181,124,44,181,124)
               ->eyeColor(2, 192,12,142,192,12,142)
               ->size(200)
               ->margin(0)
-              ->merge(public_path('/images/engaja-qr.png'), 0.3, true)
+              ->merge(public_path('/images/favicon-eja.png'), 0.3, true)
               ->errorCorrection('H')
-              ->generate(route('atividades.show', $atividade))
+              ->generate(route('presenca.confirmar', $atividade))
         ) !!}" alt="QR Code">
       </div>
 
@@ -160,6 +161,7 @@ $dia = \Carbon\Carbon::parse($atividade->dia)
       --}}
     </div>
   </div>
+  @endauth
 
   @can('presenca.abrir')
   {{-- Lista de presenças --}}

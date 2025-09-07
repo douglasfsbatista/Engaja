@@ -2,7 +2,7 @@
   <div class="container">
     {{-- Logo + texto --}}
     <a class="navbar-brand d-flex align-items-center text-engaja fw-bold" href="{{ url('/') }}">
-      <img src="{{ asset('images/engaja-bg-white.png') }}" alt="Logo Engaja"
+      <img src="{{ asset('images/logo-alfaeja.svg') }}" alt="Logo ALFA-EJA Brasil"
         class="me-2" style="height:40px;">
     </a>
 
@@ -17,12 +17,12 @@
 
       <ul class="navbar-nav ms-auto">
         @guest
-        @if (Route::has('login'))
+        {{-- @if (Route::has('login'))
         <li class="nav-item"><a class="nav-link text-white" href="{{ route('login') }}">Entrar</a></li>
         @endif
         @if (Route::has('register'))
         <li class="nav-item"><a class="nav-link text-white" href="{{ route('register') }}">Cadastrar</a></li>
-        @endif
+        @endif --}}
         @else
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle text-white" href="#" role="button"
