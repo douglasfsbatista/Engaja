@@ -33,7 +33,7 @@ class PresencaController extends Controller
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Usuário não encontrado. Verifique o campo e tente novamente.')
+                ->with('error', 'Seus dados não foram encontrados no sistema. Solicitamos, por gentileza, que registre sua presença no formulário impresso.')
                 ->with('show_register_button', true);
         }
         if ($usuario && !$participante) {
@@ -47,6 +47,9 @@ class PresencaController extends Controller
             ['inscricao_id' => $participante->inscricoes()->where('evento_id', $atividade->evento->id)->first()->id],
             ['status' => 'presente']
         );
-        return redirect()->route('presenca.confirmar', $atividade->id)->with('success', 'Presença confirmada com sucesso!');
+        $dia = \Carbon\Carbon::parse($atividade->dia)
+            ->locale('pt_BR')
+            ->translatedFormat('l, d \\d\\e F \\d\\e Y');
+        return redirect()->route('presenca.confirmar', $atividade->id)->with('success', "Presença confirmada com sucesso na ação pedagógica ".$evento->nome." (".$dia."), no momento ".$atividade->descricao."!");
     }
 }
