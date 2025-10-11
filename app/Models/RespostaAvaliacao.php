@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class RespostaAvaliacao extends Model
+{
+    protected $fillable = [
+        'avaliacao_id',
+        'questao_id',
+        'resposta',
+    ];
+
+    public function avaliacao(): BelongsTo
+    {
+        return $this->belongsTo(Avaliacao::class);
+    }
+
+    public function questao(): BelongsTo
+    {
+        return $this->belongsTo(Questao::class);
+    }
+}
