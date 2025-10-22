@@ -31,7 +31,9 @@ class TemplateAvaliacaoSeeder extends Seeder
             ],
         ];
 
-        $questoesMap = Questao::pluck('id', 'texto');
+        $questoesBase = Questao::whereNull('template_avaliacao_id')
+            ->get()
+            ->keyBy('texto');
 
         foreach ($templates as $nome => $dados) {
             $template = TemplateAvaliacao::updateOrCreate(
@@ -39,21 +41,42 @@ class TemplateAvaliacaoSeeder extends Seeder
                 ['descricao' => $dados['descricao']]
             );
 
-            $pivotData = [];
             $ordem = 1;
+            $idsMantidos = [];
 
             foreach ($dados['questoes'] as $textoQuestao) {
-                $questaoId = $questoesMap[$textoQuestao] ?? null;
+                $questaoBase = $questoesBase->get($textoQuestao)
+                    ?? Questao::whereNull('template_avaliacao_id')
+                        ->where('texto', $textoQuestao)
+                        ->first();
 
-                if (! $questaoId) {
+                if (! $questaoBase) {
                     continue;
                 }
 
-                $pivotData[$questaoId] = ['ordem' => $ordem++];
+                $questao = Questao::updateOrCreate(
+                    [
+                        'template_avaliacao_id' => $template->id,
+                        'indicador_id'          => $questaoBase->indicador_id,
+                        'texto'                 => $questaoBase->texto,
+                    ],
+                    [
+                        'escala_id' => $questaoBase->tipo === 'escala' ? $questaoBase->escala_id : null,
+                        'tipo'      => $questaoBase->tipo,
+                        'fixa'      => $questaoBase->fixa,
+                    ]
+                );
+
+                $questao->ordem = $ordem++;
+                $questao->save();
+
+                $idsMantidos[] = $questao->id;
             }
 
-            if (! empty($pivotData)) {
-                $template->questoes()->sync($pivotData);
+            if (! empty($idsMantidos)) {
+                Questao::where('template_avaliacao_id', $template->id)
+                    ->whereNotIn('id', $idsMantidos)
+                    ->delete();
             }
         }
     }

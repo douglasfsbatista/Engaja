@@ -87,13 +87,15 @@ class QuestaoSeeder extends Seeder
 
             Questao::updateOrCreate(
                 [
-                    'indicador_id' => $indicadorId,
-                    'texto'        => $questao['texto'],
+                    'template_avaliacao_id' => null,
+                    'indicador_id'          => $indicadorId,
+                    'texto'                 => $questao['texto'],
                 ],
                 [
                     'tipo'      => $questao['tipo'],
                     'escala_id' => $escalaId,
                     'fixa'      => $questao['fixa'],
+                    'ordem'     => null,
                 ]
             );
         }
