@@ -18,17 +18,11 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('questao_template_avaliacaos', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('template_avaliacao_id')
-                ->constrained('template_avaliacaos')
+        Schema::table('questaos', function (Blueprint $table) {
+            $table->foreign('template_avaliacao_id')
+                ->references('id')
+                ->on('template_avaliacaos')
                 ->cascadeOnDelete();
-            $table->foreignId('questao_id')
-                ->constrained('questaos')
-                ->cascadeOnDelete();
-            $table->integer('ordem')->nullable();
-            $table->unique(['template_avaliacao_id', 'questao_id']);
-            $table->timestamps();
         });
     }
 
@@ -37,7 +31,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('questao_template_avaliacaos');
+        Schema::table('questaos', function (Blueprint $table) {
+            if (Schema::hasColumn('questaos', 'template_avaliacao_id')) {
+                $table->dropForeign(['template_avaliacao_id']);
+            }
+        });
         Schema::dropIfExists('template_avaliacaos');
     }
 };

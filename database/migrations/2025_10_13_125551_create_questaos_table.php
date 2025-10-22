@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('questaos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('indicador_id')->constrained('indicadors');
+            $table->foreignId('indicador_id')->nullable()->constrained('indicadors');
             $table->foreignId('escala_id')->nullable()->constrained('escalas');
+            $table->unsignedBigInteger('template_avaliacao_id')->nullable();
             $table->string('texto');
             $table->string('tipo')->default('texto');
+            $table->unsignedInteger('ordem')->nullable();
             $table->boolean('fixa')->default(false);
             $table->softDeletes();
             $table->timestamps();
