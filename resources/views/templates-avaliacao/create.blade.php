@@ -11,7 +11,7 @@
           'action' => route('templates-avaliacao.store'),
           'method' => 'POST',
           'submitLabel' => 'Salvar modelo',
-          'indicadores' => $indicadores,
+          'evidencias' => $evidencias,
           'escalas' => $escalas,
           'tiposQuestao' => $tiposQuestao,
         ])

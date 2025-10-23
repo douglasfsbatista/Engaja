@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Evidencia;
 use App\Models\Escala;
-use App\Models\Indicador;
 use App\Models\TemplateAvaliacao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -45,14 +45,14 @@ class TemplateAvaliacaoController extends Controller
 
     public function show(TemplateAvaliacao $template)
     {
-        $template->load(['questoes.indicador.dimensao', 'questoes.escala']);
+        $template->load(['questoes.indicador.dimensao', 'questoes.evidencia', 'questoes.escala']);
 
         return view('templates-avaliacao.show', compact('template'));
     }
 
     public function edit(TemplateAvaliacao $template)
     {
-        $template->load(['questoes.indicador.dimensao', 'questoes.escala']);
+        $template->load(['questoes.indicador.dimensao', 'questoes.evidencia', 'questoes.escala']);
 
         return view('templates-avaliacao.edit',
             array_merge($this->formDependencies(), compact('template'))
@@ -93,25 +93,35 @@ class TemplateAvaliacaoController extends Controller
 
     private function formDependencies(): array
     {
-        $indicadores = Indicador::with('dimensao')
+        $evidencias = Evidencia::with('indicador.dimensao')
             ->orderBy('descricao')
             ->get()
-            ->mapWithKeys(fn ($indicador) => [
-                $indicador->id => $indicador->dimensao
-                    ? $indicador->dimensao->descricao . ' - ' . $indicador->descricao
-                    : $indicador->descricao,
-            ]);
+            ->mapWithKeys(function ($evidencia) {
+                $descricaoIndicador = $evidencia->indicador
+                    ? ($evidencia->indicador->dimensao
+                        ? $evidencia->indicador->dimensao->descricao . ' - ' . ($evidencia->indicador->descricao ?? '')
+                        : ($evidencia->indicador->descricao ?? ''))
+                    : null;
+
+                return [
+                    $evidencia->id => trim(
+                        $descricaoIndicador
+                            ? $descricaoIndicador . ' | ' . $evidencia->descricao
+                            : $evidencia->descricao
+                    ),
+                ];
+            });
 
         $escalas = Escala::orderBy('descricao')->pluck('descricao', 'id');
 
         $tiposQuestao = [
             'texto'  => 'Texto aberto',
             'escala' => 'Escala',
-            'numero' => 'Numérica',
-            'boolean'=> 'Sim/Não',
+            'numero' => 'Numerica',
+            'boolean'=> 'Sim/Nao',
         ];
 
-        return compact('indicadores', 'escalas', 'tiposQuestao');
+        return compact('evidencias', 'escalas', 'tiposQuestao');
     }
 
     /**
@@ -126,19 +136,19 @@ class TemplateAvaliacaoController extends Controller
 
         if ($questoesAtivas->isEmpty()) {
             throw ValidationException::withMessages([
-                'questoes' => 'Informe pelo menos uma questão para o template.',
+                'questoes' => 'Informe pelo menos uma questao para o template.',
             ]);
         }
 
         $questoesValidadas = $questoesAtivas->map(function ($questao, int $index) use ($permitirIds) {
-            // indicador_id is required only for fixed questions (fixa=true).
+            // Indicador derivado da evidencia selecionada.
             $validator = Validator::make(
                 $questao,
                 [
                     'id'           => $permitirIds
                         ? ['nullable', 'integer', Rule::exists('questaos', 'id')->whereNull('deleted_at')]
                         : ['prohibited'],
-                    'indicador_id' => ['nullable', 'integer', Rule::exists('indicadors', 'id')],
+                    'evidencia_id' => ['nullable', 'integer', Rule::exists('evidencias', 'id')],
                     'escala_id'    => ['nullable', 'integer', Rule::exists('escalas', 'id')],
                     'texto'        => ['required', 'string', 'max:1000'],
                     'tipo'         => ['required', 'string', Rule::in(['texto', 'escala', 'numero', 'boolean'])],
@@ -148,7 +158,7 @@ class TemplateAvaliacaoController extends Controller
                 [],
                 [
                     'id'           => "questoes.$index.id",
-                    'indicador_id' => "questoes.$index.indicador_id",
+                    'evidencia_id' => "questoes.$index.evidencia_id",
                     'escala_id'    => "questoes.$index.escala_id",
                     'texto'        => "questoes.$index.texto",
                     'tipo'         => "questoes.$index.tipo",
@@ -160,13 +170,13 @@ class TemplateAvaliacaoController extends Controller
             $validator->after(function ($validator) use ($questao) {
                 // Escala must be selected for 'escala' type
                 if (($questao['tipo'] ?? null) === 'escala' && empty($questao['escala_id'])) {
-                    $validator->errors()->add('escala_id', 'Selecione uma escala para questões do tipo "Escala".');
+                    $validator->errors()->add('escala_id', 'Selecione uma escala para questoes do tipo "Escala".');
                 }
 
-                // If question is fixed, indicador_id is required
+                // If question is fixed, evidence selection becomes mandatory
                 $isFixa = ! empty($questao['fixa']);
-                if ($isFixa && empty($questao['indicador_id'])) {
-                    $validator->errors()->add('indicador_id', 'Selecione um indicador para questões fixas.');
+                if ($isFixa && empty($questao['evidencia_id'])) {
+                    $validator->errors()->add('evidencia_id', 'Selecione uma evidencia para questoes fixas.');
                 }
             });
 
@@ -176,6 +186,13 @@ class TemplateAvaliacaoController extends Controller
 
             $dados = $validator->validated();
             $dados['fixa'] = ! empty($questao['fixa']);
+
+            if (! empty($dados['evidencia_id'])) {
+                $evidencia = Evidencia::select('id', 'indicador_id')->find($dados['evidencia_id']);
+                $dados['indicador_id'] = $evidencia?->indicador_id;
+            } else {
+                $dados['indicador_id'] = null;
+            }
 
             if (($dados['tipo'] ?? null) !== 'escala') {
                 $dados['escala_id'] = null;

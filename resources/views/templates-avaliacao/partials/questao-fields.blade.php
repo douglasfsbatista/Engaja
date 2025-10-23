@@ -3,7 +3,6 @@
   $errorsBag = $errors ?? app('view')->shared('errors');
   $isPrototype = $isPrototype ?? false;
   $questaoId = $questao['id'] ?? null;
-  $indicadorErro = ! $isPrototype && $errorsBag->has("questoes.$index.indicador_id");
   $evidenciaErro = ! $isPrototype && $errorsBag->has("questoes.$index.evidencia_id");
   $textoErro = ! $isPrototype && $errorsBag->has("questoes.$index.texto");
   $tipoErro = ! $isPrototype && $errorsBag->has("questoes.$index.tipo");
@@ -16,7 +15,7 @@
 <div class="card shadow-sm mb-3 question-item" data-question-card data-index="{{ $index }}" data-existing="{{ $questaoId ? 'true' : 'false' }}">
   <div class="card-body">
     <div class="d-flex justify-content-between align-items-start mb-3">
-      <h3 class="h6 fw-semibold mb-0">Questão <span class="question-position">{{ $questionPosition }}</span></h3>
+      <h3 class="h6 fw-semibold mb-0">Questao <span class="question-position">{{ $questionPosition }}</span></h3>
       <button type="button" class="btn btn-sm btn-outline-danger js-remove-question">Remover</button>
     </div>
 
@@ -25,21 +24,7 @@
 
     <div class="row g-3 align-items-start">
       <div class="col-md-6">
-        <label for="questoes-{{ $index }}-indicador_id" class="form-label">Indicador</label>
-        <select id="questoes-{{ $index }}-indicador_id" name="questoes[{{ $index }}][indicador_id]"
-          class="form-select{{ $indicadorErro ? ' is-invalid' : '' }}">
-          <option value="">Selecione...</option>
-          @foreach ($indicadores as $id => $descricao)
-          <option value="{{ $id }}" @selected(($questao['indicador_id'] ?? '') == $id)>{{ $descricao }}</option>
-          @endforeach
-        </select>
-        @if ($indicadorErro)
-        <div class="invalid-feedback">{{ $errorsBag->first("questoes.$index.indicador_id") }}</div>
-        @endif
-      </div>
-
-      <div class="col-md-6">
-        <label for="questoes-{{ $index }}-evidencia_id" class="form-label">Evidência</label>
+        <label for="questoes-{{ $index }}-evidencia_id" class="form-label">Evidencia</label>
         <select id="questoes-{{ $index }}-evidencia_id" name="questoes[{{ $index }}][evidencia_id]"
           class="form-select{{ $evidenciaErro ? ' is-invalid' : '' }}">
           <option value="">Selecione...</option>
@@ -47,6 +32,7 @@
           <option value="{{ $id }}" @selected(($questao['evidencia_id'] ?? '') == $id)>{{ $descricao }}</option>
           @endforeach
         </select>
+        <div class="form-text">O indicador sera associado automaticamente pela evidencia escolhida.</div>
         @if ($evidenciaErro)
         <div class="invalid-feedback">{{ $errorsBag->first("questoes.$index.evidencia_id") }}</div>
         @endif
@@ -103,10 +89,11 @@
     <div class="form-check form-switch mt-3">
       <input class="form-check-input{{ $fixaErro ? ' is-invalid' : '' }}" type="checkbox" role="switch"
         id="questoes-{{ $index }}-fixa" name="questoes[{{ $index }}][fixa]" value="1" @checked(!empty($questao['fixa']))>
-      <label class="form-check-label" for="questoes-{{ $index }}-fixa">Questão fixa</label>
+      <label class="form-check-label" for="questoes-{{ $index }}-fixa">Questao fixa</label>
       @if ($fixaErro)
       <div class="invalid-feedback d-block">{{ $errorsBag->first("questoes.$index.fixa") }}</div>
       @endif
     </div>
   </div>
 </div>
+

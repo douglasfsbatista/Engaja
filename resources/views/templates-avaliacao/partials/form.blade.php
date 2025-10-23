@@ -169,7 +169,7 @@
       container.appendChild(fragment);
       updatePositions();
       // Ensure new question fields have correct required state and visibility
-      applyIndicadorRequiredRules();
+      applyEvidenciaRequiredRules();
       applyEscalaVisibility();
     };
 
@@ -274,23 +274,20 @@
       }
     });
 
-    // Toggle indicadore/evidência required attribute based on fixa checkbox.
+    // Toggle evidencia required attribute based on fixa checkbox.
     function applyEvidenciaRequiredRules() {
       const cards = Array.from(container.querySelectorAll('[data-question-card]'))
         .filter((card) => !card.classList.contains('d-none'));
 
       cards.forEach((card) => {
-        const fixaCheckbox = card.querySelector('input[type="checkbox"][name$="[fixa]"]');
-        const evidenciaSelect = card.querySelector('select[name$="[evidencia_id]"]');
-        const indicadorSelect = card.querySelector('select[name$="[indicador_id]"]');
-        if (!evidenciaSelect && !indicadorSelect) return;
+        const fixaCheckbox = card.querySelector("input[type=\"checkbox\"][name$=\"[fixa]\"]");
+        const evidenciaSelect = card.querySelector("select[name$=\"[evidencia_id]\"]");
+        if (!evidenciaSelect) return;
 
         if (fixaCheckbox && fixaCheckbox.checked) {
-          if (evidenciaSelect) evidenciaSelect.setAttribute('required', 'required');
-          if (indicadorSelect) indicadorSelect.setAttribute('required', 'required');
+          evidenciaSelect.setAttribute('required', 'required');
         } else {
-          if (evidenciaSelect) evidenciaSelect.removeAttribute('required');
-          if (indicadorSelect) indicadorSelect.removeAttribute('required');
+          evidenciaSelect.removeAttribute('required');
         }
       });
     }
@@ -298,19 +295,16 @@
     // Listen for fixa change to update required rule live
     container.addEventListener('change', (event) => {
       const target = event.target;
-      if (target.matches('input[type="checkbox"][name$="[fixa]"]')) {
+      if (target.matches("input[type=\"checkbox\"][name$=\"[fixa]\"]")) {
         const card = target.closest('[data-question-card]');
         if (!card) return;
-        const evidenciaSelect = card.querySelector('select[name$="[evidencia_id]"]');
-        const indicadorSelect = card.querySelector('select[name$="[indicador_id]"]');
-        if (!evidenciaSelect && !indicadorSelect) return;
+        const evidenciaSelect = card.querySelector("select[name$=\"[evidencia_id]\"]");
+        if (!evidenciaSelect) return;
 
         if (target.checked) {
-          if (evidenciaSelect) evidenciaSelect.setAttribute('required', 'required');
-          if (indicadorSelect) indicadorSelect.setAttribute('required', 'required');
+          evidenciaSelect.setAttribute('required', 'required');
         } else {
-          if (evidenciaSelect) evidenciaSelect.removeAttribute('required');
-          if (indicadorSelect) indicadorSelect.removeAttribute('required');
+          evidenciaSelect.removeAttribute('required');
         }
       }
     });

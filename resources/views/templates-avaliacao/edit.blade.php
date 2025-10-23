@@ -12,7 +12,7 @@
           'method' => 'PUT',
           'submitLabel' => 'Salvar alterações',
           'template' => $template,
-          'indicadores' => $indicadores,
+          'evidencias' => $evidencias,
           'escalas' => $escalas,
           'tiposQuestao' => $tiposQuestao,
         ])
