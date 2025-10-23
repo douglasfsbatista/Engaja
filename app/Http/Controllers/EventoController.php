@@ -206,8 +206,8 @@ class EventoController extends Controller
                 $participanteData
             );
 
-            $this->inscricao($user, $evento);
-            $this->presenca($user->participante, $atividade);
+            $inscricao = $this->inscricao($user, $evento, $atividade);
+            $this->presenca($inscricao, $atividade);
 
             DB::commit();
 
@@ -221,34 +221,46 @@ class EventoController extends Controller
         }
     }
 
-    public function inscricao(User $user, Evento $evento)
+    public function inscricao(User $user, Evento $evento, Atividade $atividade)
     {
         $participante = $user->participante;
 
-        $exists = \DB::table('inscricaos')
-            ->where('evento_id', $evento->id)
+        $inscricao = Inscricao::withTrashed()
             ->where('participante_id', $participante->id)
-            ->whereNull('deleted_at')
-            ->exists();
+            ->where('atividade_id', $atividade->id)
+            ->first();
 
-        if (!$exists) {
-            $inscricao = \DB::table('inscricaos')->insert([
-                'evento_id'       => $evento->id,
-                'participante_id' => $participante->id,
-                'created_at'      => now(),
-                'updated_at'      => now(),
-            ]);
-
-            return $inscricao;
-        } else {
-            return $exists;
+        if (!$inscricao) {
+            $inscricao = Inscricao::withTrashed()
+                ->where('participante_id', $participante->id)
+                ->where('evento_id', $evento->id)
+                ->whereNull('atividade_id')
+                ->first();
         }
+
+        if ($inscricao) {
+            $inscricao->fill([
+                'evento_id'       => $evento->id,
+                'atividade_id'    => $atividade->id,
+                'participante_id' => $participante->id,
+            ]);
+            $inscricao->deleted_at = null;
+            $inscricao->save();
+        } else {
+            $inscricao = Inscricao::create([
+                'evento_id'       => $evento->id,
+                'atividade_id'    => $atividade->id,
+                'participante_id' => $participante->id,
+            ]);
+        }
+
+        return $inscricao;
     }
 
-    public function presenca(Participante $participante, Atividade $atividade)
+    public function presenca(Inscricao $inscricao, Atividade $atividade)
     {
         $atividade->presencas()->updateOrCreate(
-            ['inscricao_id' => $participante->inscricoes()->where('evento_id', $atividade->evento->id)->first()->id],
+            ['inscricao_id' => $inscricao->id, 'atividade_id' => $atividade->id],
             ['status' => 'presente']
         );
     }

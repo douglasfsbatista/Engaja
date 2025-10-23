@@ -36,8 +36,16 @@
                 <th style="width: 12%;">Data</th>
                 <th style="width: 10%;">Hora</th>
                 <th>Momento</th>
+<<<<<<< HEAD
                 <th style="width: 30%;">Ação pedagógica</th>
                 <th style="width: 12%;">Presentes</th>
+=======
+                <th style="width: 20%;">Municipio</th>
+                <th style="width: 24%;">Acao pedagogica</th>
+                <th style="width: 8%;" class="text-right">Inscritos</th>
+                <th style="width: 8%;" class="text-right">Presentes</th>
+                <th style="width: 8%;" class="text-right">Ausentes</th>
+>>>>>>> 4d20cab (alterando inscricoes para serem a partir do momento)
             </tr>
         </thead>
         <tbody>
@@ -46,16 +54,26 @@
                     $data = $a->dia ? Carbon::parse($a->dia)->format('d/m/Y') : '—';
                     $hora = $a->hora_inicio ? substr($a->hora_inicio, 0, 5) : '—';
                     $presentes = collect($a->presencas ?? []);
+                    $inscricoes = collect($a->inscricoes ?? []);
+                    $presentesIds = $presentes->pluck('inscricao_id')->filter()->unique();
+                    $ausentes = $inscricoes->filter(fn($insc) => !$presentesIds->contains($insc->id))->values();
+                    $inscritosCount = $inscricoes->count();
+                    $presentesCount = $presentesIds->count();
+                    $ausentesCount = $ausentes->count();
                 @endphp
                 <tr>
                     <td>{{ $data }}</td>
                     <td>{{ $hora }}</td>
                     <td>{{ $a->descricao ?? 'Momento' }}</td>
-                    <td>{{ $a->evento_nome ?? optional($a->evento)->nome ?? '—' }}</td>
-                    <td class="text-right fw-bold">{{ $a->presentes_count }}</td>
+                    <td>{{ $a->municipio?->nome_com_estado ?? '-' }}</td>
+                    <td>{{ $a->evento_nome ?? optional($a->evento)->nome ?? '-' }}</td>
+                    <td class="text-right fw-bold">{{ $inscritosCount }}</td>
+                    <td class="text-right fw-bold">{{ $presentesCount }}</td>
+                    <td class="text-right fw-bold">{{ $ausentesCount }}</td>
                 </tr>
                 <tr>
-                    <td colspan="5">
+                    <td colspan="8">
+                        <div class="section-title fw-bold">Resumo: inscritos {{ $inscritosCount }}, presentes {{ $presentesCount }}, ausentes {{ $ausentesCount }}</div>
                         <div class="section-title fw-bold">Presentes</div>
                         @if($presentes->isEmpty())
                             <div class="small muted mb-10">Nenhum presente listado.</div>
@@ -82,11 +100,44 @@
                                 </tbody>
                             </table>
                         @endif
+                        <div class="section-title fw-bold" style="margin-top:10px;">Ausentes</div>
+                        @if($ausentes->isEmpty())
+                            <div class="small muted mb-10">Nenhum ausente listado.</div>
+                        @else
+                            <table class="subtable" style="margin-top:6px; width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 35%;">Nome</th>
+                                        <th style="width: 30%;">E-mail</th>
+                                        <th style="width: 18%;">CPF</th>
+                                        <th style="width: 17%;">Tag</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                @foreach($ausentes as $insc)
+                                    @php
+                                        $part = optional($insc->participante);
+                                        $user = optional($part->user);
+                                    @endphp
+                                    <tr>
+                                        <td>{{ $user->name ?? ('Participante #'.$part->id) }}</td>
+                                        <td>{{ $user->email ?? '-' }}</td>
+                                        <td>{{ $part->cpf ?: '-' }}</td>
+                                        <td>{{ $part->tag ?: '-' }}</td>
+                                    </tr>
+                                @endforeach
+                                </tbody>
+                            </table>
+                        @endif
                     </td>
                 </tr>
             @empty
                 <tr>
+<<<<<<< HEAD
                     <td colspan="5" class="muted">Nenhuma atividade encontrada.</td>
+=======
+                    <td colspan="8" class="muted">Nenhuma atividade encontrada.</td>
+>>>>>>> 4d20cab (alterando inscricoes para serem a partir do momento)
                 </tr>
             @endforelse
         </tbody>
