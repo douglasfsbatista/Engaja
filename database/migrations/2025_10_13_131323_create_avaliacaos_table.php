@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('avaliacaos', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('inscricao_id')->constrained('inscricaos');
+            $table->foreignId('inscricao_id')->nullable()->constrained('inscricaos');
             $table->foreignId('atividade_id')->constrained('atividades');
             $table->foreignId('template_avaliacao_id')->constrained('template_avaliacaos');
             $table->timestamps();
