@@ -6,7 +6,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="utf-8">
-    <title>Dashboard - Lista de Presenças</title>
+    <title>Dashboard - Lista de Presencas</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color:#222; }
         h1 { font-size: 18px; margin: 0 0 8px; }
@@ -25,7 +25,7 @@
     </style>
 </head>
 <body>
-    <h1>Dashboard — Lista de Presenças</h1>
+    <h1>Dashboard - Lista de Presencas</h1>
     <div class="meta">
         Gerado em {{ now()->format('d/m/Y H:i') }}
     </div>
@@ -36,23 +36,18 @@
                 <th style="width: 12%;">Data</th>
                 <th style="width: 10%;">Hora</th>
                 <th>Momento</th>
-<<<<<<< HEAD
-                <th style="width: 30%;">Ação pedagógica</th>
-                <th style="width: 12%;">Presentes</th>
-=======
                 <th style="width: 20%;">Municipio</th>
                 <th style="width: 24%;">Acao pedagogica</th>
                 <th style="width: 8%;" class="text-right">Inscritos</th>
                 <th style="width: 8%;" class="text-right">Presentes</th>
                 <th style="width: 8%;" class="text-right">Ausentes</th>
->>>>>>> 4d20cab (alterando inscricoes para serem a partir do momento)
             </tr>
         </thead>
         <tbody>
             @forelse($atividades as $a)
                 @php
-                    $data = $a->dia ? Carbon::parse($a->dia)->format('d/m/Y') : '—';
-                    $hora = $a->hora_inicio ? substr($a->hora_inicio, 0, 5) : '—';
+                    $data = $a->dia ? Carbon::parse($a->dia)->format('d/m/Y') : '-';
+                    $hora = $a->hora_inicio ? substr($a->hora_inicio, 0, 5) : '-';
                     $presentes = collect($a->presencas ?? []);
                     $inscricoes = collect($a->inscricoes ?? []);
                     $presentesIds = $presentes->pluck('inscricao_id')->filter()->unique();
@@ -81,8 +76,10 @@
                             <table class="subtable" style="margin-top:6px; width:100%;">
                                 <thead>
                                     <tr>
-                                        <th style="width: 55%;">Nome</th>
-                                        <th style="width: 45%;">E-mail</th>
+                                        <th style="width: 35%;">Nome</th>
+                                        <th style="width: 30%;">E-mail</th>
+                                        <th style="width: 18%;">CPF</th>
+                                        <th style="width: 17%;">Tag</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -94,7 +91,9 @@
                                     @endphp
                                     <tr>
                                         <td>{{ $user->name ?? ('Participante #'.$part->id) }}</td>
-                                        <td>{{ $user->email ?? '—' }}</td>
+                                        <td>{{ $user->email ?? '-' }}</td>
+                                        <td>{{ $part->cpf ?: '-' }}</td>
+                                        <td>{{ $part->tag ?: '-' }}</td>
                                     </tr>
                                 @endforeach
                                 </tbody>
@@ -133,11 +132,7 @@
                 </tr>
             @empty
                 <tr>
-<<<<<<< HEAD
-                    <td colspan="5" class="muted">Nenhuma atividade encontrada.</td>
-=======
                     <td colspan="8" class="muted">Nenhuma atividade encontrada.</td>
->>>>>>> 4d20cab (alterando inscricoes para serem a partir do momento)
                 </tr>
             @endforelse
         </tbody>

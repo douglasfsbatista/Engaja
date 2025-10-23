@@ -86,9 +86,8 @@
                             <th style="min-width:110px;">{!! sort_link('Data','dia') !!}</th>
                             <th style="min-width:80px;">{!! sort_link('Hora','hora') !!}</th>
                             <th>{!! sort_link('Momento','momento') !!}</th>
-
-                            <th>{!! sort_link('Municipio','municipio') !!}</th>
-                            <th>{!! sort_link('Acao pedagogica','acao') !!}</th>
+                            <th>{!! sort_link('Município','municipio') !!}</th>
+                            <th>{!! sort_link('Ação pedagógica','acao') !!}</th>
                             <th class="text-end" style="min-width:90px;">{!! sort_link('Inscritos','inscritos') !!}</th>
                             <th class="text-end" style="min-width:90px;">{!! sort_link('Presentes','presentes') !!}</th>
                             <th class="text-end" style="min-width:90px;">{!! sort_link('Ausentes','ausentes') !!}</th>
@@ -113,8 +112,10 @@
                             <td>{{ $data }}</td>
                             <td>{{ $hora }}</td>
                             <td>{{ $a->descricao ?? 'Momento' }}</td>
-                            <td>{{ $a->evento_nome ?? $a->evento->nome ?? '—' }}</td>
+                            <td>{{ $a->municipio?->nome_com_estado ?? '-' }}</td>
+                            <td>{{ $a->evento_nome ?? $a->evento->nome ?? '-' }}</td>
                             <td class="text-end fw-semibold">{{ $inscritosCount }}</td>
+                            {{-- Gatilho do accordion na coluna Presentes --}}
                             <td class="text-end">
                                 <a class="badge bg-success text-decoration-none"
                                     data-bs-toggle="collapse"
@@ -144,10 +145,14 @@
                         </tr>
                         {{-- Linha de detalhes: agora o .collapse fica dentro do TD --}}
                         <tr>
-                            <td colspan="7" class="bg-light p-0">
+                            <td colspan="8" class="bg-light p-0">
                                 <div id="{{ $collapseId }}" class="collapse presentes-collapse">
+                                    <div class="px-3 py-2 border-bottom small text-muted">
+                                        Inscritos: <strong>{{ $inscritosCount }}</strong> |
+                                        Presentes: <strong>{{ $presentesCount }}</strong> |
+                                        Ausentes: <strong>{{ $ausentesCount }}</strong>
+                                    </div>
 
-                                    <div class="px-3 py-2 border-bottom small text-muted">Inscritos: <strong>{{ $inscritosCount }}</strong> | Presentes: <strong>{{ $presentesCount }}</strong> | Ausentes: <strong>{{ $ausentesCount }}</strong></div>
                                     <div id="{{ $collapseId }}-presentes" class="p-2">
                                         <div class="section-title fw-bold">Presentes</div>
                                         @if($presentes->isEmpty())
@@ -165,23 +170,24 @@
                                                     </thead>
                                                     <tbody>
                                                         @foreach($presentes as $p)
-                                                        @php
-                                                        $insc = optional($p->inscricao);
-                                                        $part = optional($insc->participante);
-                                                        $user = optional($part->user);
-                                                        @endphp
-                                                        <tr>
-                                                            <td>{{ $user->name ?? "Participante #".$part->id }}</td>
-                                                            <td>{{ $user->email ?? '-' }}</td>
-                                                            <td>{{ $part->cpf ?: '-' }}</td>
-                                                            <td>{{ $part->tag ?: '-' }}</td>
-                                                        </tr>
+                                                            @php
+                                                                $insc = optional($p->inscricao);
+                                                                $part = optional($insc->participante);
+                                                                $user = optional($part->user);
+                                                            @endphp
+                                                            <tr>
+                                                                <td>{{ $user->name ?? 'Participante #'.$part->id }}</td>
+                                                                <td>{{ $user->email ?? '-' }}</td>
+                                                                <td>{{ $part->cpf ?: '-' }}</td>
+                                                                <td>{{ $part->tag ?: '-' }}</td>
+                                                            </tr>
                                                         @endforeach
                                                     </tbody>
                                                 </table>
                                             </div>
                                         @endif
                                     </div>
+
                                     <div id="{{ $collapseId }}-ausentes" class="p-2">
                                         <div class="section-title fw-bold">Ausentes</div>
                                         @if($ausentes->isEmpty())
@@ -199,29 +205,28 @@
                                                     </thead>
                                                     <tbody>
                                                         @foreach($ausentes as $insc)
-                                                        @php
-                                                        $part = optional($insc->participante);
-                                                        $user = optional($part->user);
-                                                        @endphp
-                                                        <tr>
-                                                            <td>{{ $user->name ?? "Participante #".$part->id }}</td>
-                                                            <td>{{ $user->email ?? '-' }}</td>
-                                                            <td>{{ $part->cpf ?: '-' }}</td>
-                                                            <td>{{ $part->tag ?: '-' }}</td>
-                                                        </tr>
+                                                            @php
+                                                                $part = optional($insc->participante);
+                                                                $user = optional($part->user);
+                                                            @endphp
+                                                            <tr>
+                                                                <td>{{ $user->name ?? 'Participante #'.$part->id }}</td>
+                                                                <td>{{ $user->email ?? '-' }}</td>
+                                                                <td>{{ $part->cpf ?: '-' }}</td>
+                                                                <td>{{ $part->tag ?: '-' }}</td>
+                                                            </tr>
                                                         @endforeach
                                                     </tbody>
                                                 </table>
                                             </div>
                                         @endif
->>>>>>> 4d20cab (alterando inscricoes para serem a partir do momento)
                                     </div>
                                 </div>
                             </td>
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted p-4">Nenhuma atividade encontrada.</td>
+                            <td colspan="8" class="text-center text-muted p-4">Nenhuma atividade encontrada.</td>
                         </tr>
                         @endforelse
                     </tbody>
@@ -314,4 +319,3 @@
 </script>
 
 @endsection
-
