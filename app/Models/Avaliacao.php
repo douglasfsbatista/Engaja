@@ -29,5 +29,11 @@ class Avaliacao extends Model
     {
         return $this->hasMany(RespostaAvaliacao::class);
     }
-}
 
+    public function avaliacaoQuestoes(): HasMany
+    {
+        return $this->hasMany(AvaliacaoQuestao::class)
+            ->orderBy('ordem')
+            ->orderBy('id');
+    }
+}

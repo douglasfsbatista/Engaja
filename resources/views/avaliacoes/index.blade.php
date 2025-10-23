@@ -11,8 +11,7 @@
     <table class="table table-hover align-middle mb-0">
       <thead class="table-light">
         <tr>
-          <th>Participante</th>
-          <th>Evento / Atividade</th>
+          <th>Momento</th>
           <th>Modelo</th>
           <th>Registrada em</th>
           <th class="text-end">Ações</th>
@@ -20,15 +19,11 @@
       </thead>
       <tbody>
         @forelse ($avaliacoes as $avaliacao)
+        @php
+          $inscricaoExibida = $avaliacao->inscricao ?? $avaliacao->respostas->first()?->inscricao;
+          $participanteNome = $inscricaoExibida?->participante?->user?->name;
+        @endphp
         <tr>
-          <td>
-            <span class="fw-semibold">
-              {{ $avaliacao->inscricao->participante->user->name ?? '—' }}
-            </span>
-            <small class="d-block text-muted">
-              {{ $avaliacao->inscricao->evento->nome ?? 'Sem evento' }}
-            </small>
-          </td>
           <td>
             <span>{{ $avaliacao->atividade->descricao ?? '—' }}</span>
             <small class="d-block text-muted">

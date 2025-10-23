@@ -15,25 +15,7 @@
           @method('PUT')
 
           <div class="row g-3">
-            <div class="col-md-4">
-              <label for="inscricao_id" class="form-label">Inscrição</label>
-              <select id="inscricao_id" name="inscricao_id"
-                class="form-select @error('inscricao_id') is-invalid @enderror" required>
-                <option value="">Selecione...</option>
-                @foreach ($inscricoes as $inscricao)
-                <option value="{{ $inscricao->id }}"
-                  @selected(old('inscricao_id', $avaliacao->inscricao_id) == $inscricao->id)>
-                  {{ $inscricao->participante->user->name ?? 'Participante sem nome' }} —
-                  {{ $inscricao->evento->nome ?? 'Evento indefinido' }}
-                </option>
-                @endforeach
-              </select>
-              @error('inscricao_id')
-              <div class="invalid-feedback">{{ $message }}</div>
-              @enderror
-            </div>
-
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label for="atividade_id" class="form-label">Atividade</label>
               <select id="atividade_id" name="atividade_id"
                 class="form-select @error('atividade_id') is-invalid @enderror" required>
@@ -50,7 +32,7 @@
               @enderror
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-6">
               <label for="template_avaliacao_id" class="form-label">Modelo de avaliação</label>
               <select id="template_avaliacao_id" name="template_avaliacao_id"
                 class="form-select @error('template_avaliacao_id') is-invalid @enderror" required>
@@ -69,13 +51,18 @@
           </div>
 
           <div class="mt-4">
-            @php
-              $respostasExistentes = $avaliacao->respostas->pluck('resposta', 'questao_id')->toArray();
-            @endphp
             @include('avaliacoes._questoes', [
                 'templates' => $templates,
                 'selectedTemplateId' => old('template_avaliacao_id', $avaliacao->template_avaliacao_id),
-                'respostasAntigas' => old('respostas', $respostasExistentes),
+                'personalizacoes' => $personalizacoes ?? [],
+                'respostas' => [],
+                'exibirRespostas' => false,
+                'evidenciasOptions' => $evidenciasOptions ?? [],
+                'evidenciasData' => $evidenciasData ?? collect(),
+                'escalasOptions' => $escalasOptions ?? [],
+                'escalasData' => $escalasData ?? collect(),
+                'tiposQuestao' => $tiposQuestao ?? [],
+                'questoesAdicionais' => old('questoes_adicionais', $questoesAdicionais ?? []),
             ])
           </div>
 
