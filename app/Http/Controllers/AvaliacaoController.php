@@ -7,11 +7,14 @@ use App\Models\Avaliacao;
 use App\Models\Evidencia;
 use App\Models\Escala;
 use App\Models\TemplateAvaliacao;
+use App\ViewModels\Avaliacao\QuestoesFormViewModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+
+use Illuminate\Support\Facades\DB;
 
 class AvaliacaoController extends Controller
 {
@@ -48,20 +51,48 @@ class AvaliacaoController extends Controller
 
         $escalas = Escala::orderBy('descricao')->get();
 
+        $tiposQuestao = $this->tiposQuestao();
+
+        $selectedTemplateId = $request->old('template_avaliacao_id', $templates->first()->id ?? null);
+        $oldInput = $request->old();
+        if (! is_array($oldInput)) {
+            $oldInput = [];
+        }
+
+        $questoesAdicionaisInput = $request->old('questoes_adicionais', []);
+        if (! is_array($questoesAdicionaisInput)) {
+            $questoesAdicionaisInput = [];
+        }
+
+        $evidenciasOptions = $evidencias->mapWithKeys(fn ($evidencia) => [
+            $evidencia->id => ($evidencia->indicador && $evidencia->indicador->dimensao
+                    ? $evidencia->indicador->dimensao->descricao . ' - '
+                    : '') . ($evidencia->indicador->descricao ?? '') . ' | ' . $evidencia->descricao,
+        ])->toArray();
+
+        $escalasOptions = $escalas->pluck('descricao', 'id')->toArray();
+
+        $questoesForm = QuestoesFormViewModel::make(
+            $templates,
+            $selectedTemplateId !== null ? (string) $selectedTemplateId : null,
+            [],
+            $questoesAdicionaisInput,
+            $tiposQuestao,
+            $evidenciasOptions,
+            $evidencias->keyBy('id'),
+            $escalasOptions,
+            $escalas->keyBy('id'),
+            [],
+            false,
+            $request->session()->get('errors'),
+            $oldInput
+        )->toArray();
+
         return view('avaliacoes.create', [
             'atividades'      => $atividades,
             'templates'       => $templates,
-            'personalizacoes' => old('questoes', []),
-            'evidenciasOptions' => $evidencias->mapWithKeys(fn ($evidencia) => [
-                $evidencia->id => ($evidencia->indicador && $evidencia->indicador->dimensao
-                    ? $evidencia->indicador->dimensao->descricao . ' - '
-                    : '') . ($evidencia->indicador->descricao ?? '') . ' | ' . $evidencia->descricao,
-            ]),
-            'evidenciasData'   => $evidencias->keyBy('id'),
-            'escalasOptions'   => $escalas->pluck('descricao', 'id'),
-            'escalasData'      => $escalas->keyBy('id'),
-            'tiposQuestao'     => $this->tiposQuestao(),
-            'questoesAdicionais' => old('questoes_adicionais', []),
+            'selectedTemplateId' => $selectedTemplateId,
+            'questoesForm'    => $questoesForm,
         ]);
     }
 
@@ -95,7 +126,7 @@ class AvaliacaoController extends Controller
                 ->withErrors(['atividade_id' => 'Ja existe uma avaliacao para esta inscricao nesta atividade.']);
         }
 
-        \DB::transaction(function () use ($dados, $template, $customizacoes, $questoesAdicionais) {
+        DB::transaction(function () use ($dados, $template, $customizacoes, $questoesAdicionais) {
             $avaliacao = Avaliacao::create($dados);
 
             $this->sincronizaQuestoesPersonalizadas(
@@ -136,7 +167,7 @@ class AvaliacaoController extends Controller
         ]);
     }
 
-    public function edit(Avaliacao $avaliacao)
+    public function edit(Request $request, Avaliacao $avaliacao)
     {
         $avaliacao->load([
             'templateAvaliacao',
@@ -187,22 +218,50 @@ class AvaliacaoController extends Controller
             ->values()
             ->all();
 
+        $tiposQuestao = $this->tiposQuestao();
+
+        $selectedTemplateId = $request->old('template_avaliacao_id', $avaliacao->template_avaliacao_id);
+        $oldInput = $request->old();
+        if (! is_array($oldInput)) {
+            $oldInput = [];
+        }
+
+        $questoesAdicionaisInput = $request->old('questoes_adicionais', $questoesAdicionais);
+        if (! is_array($questoesAdicionaisInput)) {
+            $questoesAdicionaisInput = $questoesAdicionais;
+        }
+
+        $evidenciasOptions = $evidencias->mapWithKeys(fn ($evidencia) => [
+            $evidencia->id => ($evidencia->indicador && $evidencia->indicador->dimensao
+                ? $evidencia->indicador->dimensao->descricao . ' - '
+                : '') . ($evidencia->indicador->descricao ?? '') . ' | ' . $evidencia->descricao,
+        ])->toArray();
+
+        $escalasOptions = $escalas->pluck('descricao', 'id')->toArray();
+
+        $questoesForm = QuestoesFormViewModel::make(
+            $templates,
+            $selectedTemplateId !== null ? (string) $selectedTemplateId : null,
+            $personalizacoes,
+            $questoesAdicionaisInput,
+            $tiposQuestao,
+            $evidenciasOptions,
+            $evidencias->keyBy('id'),
+            $escalasOptions,
+            $escalas->keyBy('id'),
+            [],
+            false,
+            $request->session()->get('errors'),
+            $oldInput
+        )->toArray();
+
         return view('avaliacoes.edit', [
             'avaliacao'           => $avaliacao,
             'atividades'          => $atividades,
             'templates'           => $templates,
             'templateSelecionado' => $avaliacao->templateAvaliacao,
-            'personalizacoes'     => old('questoes', $personalizacoes),
-            'evidenciasOptions'   => $evidencias->mapWithKeys(fn ($evidencia) => [
-                $evidencia->id => ($evidencia->indicador && $evidencia->indicador->dimensao
-                    ? $evidencia->indicador->dimensao->descricao . ' - '
-                    : '') . ($evidencia->indicador->descricao ?? '') . ' | ' . $evidencia->descricao,
-            ]),
-            'evidenciasData'      => $evidencias->keyBy('id'),
-            'escalasOptions'      => $escalas->pluck('descricao', 'id'),
-            'escalasData'         => $escalas->keyBy('id'),
-            'tiposQuestao'        => $this->tiposQuestao(),
-            'questoesAdicionais'  => old('questoes_adicionais', $questoesAdicionais),
+            'selectedTemplateId'  => $selectedTemplateId,
+            'questoesForm'        => $questoesForm,
         ]);
     }
 
@@ -238,7 +297,7 @@ class AvaliacaoController extends Controller
                 ->withErrors(['atividade_id' => 'Ja existe outra avaliacao para esta inscricao nesta atividade.']);
         }
 
-        \DB::transaction(function () use ($avaliacao, $dados, $template, $customizacoes, $respostas, $questoesAdicionais, $questoesAdicionaisRemovidas) {
+        DB::transaction(function () use ($avaliacao, $dados, $template, $customizacoes, $respostas, $questoesAdicionais, $questoesAdicionaisRemovidas) {
             $templateAlterado = $avaliacao->template_avaliacao_id !== $dados['template_avaliacao_id'];
 
             $avaliacao->update($dados);

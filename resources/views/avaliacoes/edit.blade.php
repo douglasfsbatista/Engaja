@@ -39,7 +39,7 @@
                 <option value="">Selecione...</option>
                 @foreach ($templates as $template)
                 <option value="{{ $template->id }}"
-                  @selected(old('template_avaliacao_id', $avaliacao->template_avaliacao_id) == $template->id)>
+                  @selected($selectedTemplateId == $template->id)>
                   {{ $template->nome }}
                 </option>
                 @endforeach
@@ -52,17 +52,7 @@
 
           <div class="mt-4">
             @include('avaliacoes._questoes', [
-                'templates' => $templates,
-                'selectedTemplateId' => old('template_avaliacao_id', $avaliacao->template_avaliacao_id),
-                'personalizacoes' => $personalizacoes ?? [],
-                'respostas' => [],
-                'exibirRespostas' => false,
-                'evidenciasOptions' => $evidenciasOptions ?? [],
-                'evidenciasData' => $evidenciasData ?? collect(),
-                'escalasOptions' => $escalasOptions ?? [],
-                'escalasData' => $escalasData ?? collect(),
-                'tiposQuestao' => $tiposQuestao ?? [],
-                'questoesAdicionais' => old('questoes_adicionais', $questoesAdicionais ?? []),
+        'questoesForm' => $questoesForm,
             ])
           </div>
 

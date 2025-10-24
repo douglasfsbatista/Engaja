@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\TemplateEmUsoException;
 use App\Models\Evidencia;
 use App\Models\Escala;
 use App\Models\TemplateAvaliacao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -76,11 +78,24 @@ class TemplateAvaliacaoController extends Controller
 
     public function destroy(TemplateAvaliacao $template)
     {
-        $template->delete();
+        try {
+            $template->delete();
+        } catch (QueryException $exception) {
+            if ($this->isForeignKeyConstraintViolation($exception)) {
+                throw new TemplateEmUsoException($template, previous: $exception);
+            }
+
+            throw $exception;
+        }
 
         return redirect()
             ->route('templates-avaliacao.index')
             ->with('success', 'Template de avaliação removido com sucesso!');
+    }
+
+    private function isForeignKeyConstraintViolation(QueryException $exception): bool
+    {
+        return (string) $exception->getCode() === '23503';
     }
 
     private function validateTemplate(Request $request): array

@@ -5,10 +5,6 @@
   <div class="col-xl-10">
     <h1 class="h3 fw-bold text-engaja mb-4">Nova avaliação</h1>
 
-    @php
-      $selectedTemplateId = old('template_avaliacao_id', $templates->first()->id ?? null);
-    @endphp
-
     <div class="card shadow-sm mb-4">
       <div class="card-body">
         <form method="POST" action="{{ route('avaliacoes.store') }}">
@@ -51,17 +47,7 @@
 
           <div class="mt-4">
             @include('avaliacoes._questoes', [
-                'templates' => $templates,
-                'selectedTemplateId' => $selectedTemplateId,
-                'personalizacoes' => $personalizacoes ?? [],
-                'respostas' => [],
-                'exibirRespostas' => false,
-                'evidenciasOptions' => $evidenciasOptions ?? [],
-                'evidenciasData' => $evidenciasData ?? collect(),
-                'escalasOptions' => $escalasOptions ?? [],
-                'escalasData' => $escalasData ?? collect(),
-                'tiposQuestao' => $tiposQuestao ?? [],
-                'questoesAdicionais' => old('questoes_adicionais', []),
+        'questoesForm' => $questoesForm,
             ])
           </div>
 
