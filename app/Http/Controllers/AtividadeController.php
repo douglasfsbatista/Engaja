@@ -32,7 +32,9 @@ class AtividadeController extends Controller
             ->orderBy('nome')
             ->get(['id', 'nome', 'estado_id']);
 
-        return view('atividades.create', compact('evento', 'municipios'));
+        $atividadesCopiaveis = $this->listarAtividadesCopiaveis();
+
+        return view('atividades.create', compact('evento', 'municipios', 'atividadesCopiaveis'));
     }
 
     public function store(Request $request, Evento $evento)
@@ -40,18 +42,25 @@ class AtividadeController extends Controller
         $this->authorize('update', $evento);
 
         $dados = $request->validate([
-            'municipio_id'  => 'required|exists:municipios,id',
-            'descricao'     => 'required|string',
-            'dia'           => 'required|date',
-            'hora_inicio'   => 'required|date_format:H:i',
-            'hora_fim'      => 'required|date_format:H:i|after:hora_inicio',
+            'municipio_id'        => 'required|exists:municipios,id',
+            'descricao'           => 'required|string',
+            'dia'                 => 'required|date',
+            'hora_inicio'         => 'required|date_format:H:i',
+            'hora_fim'            => 'required|date_format:H:i|after:hora_inicio',
+            'publico_esperado'    => 'nullable|integer|min:0',
+            'carga_horaria'       => 'nullable|integer|min:0',
+            'copiar_inscritos_de' => 'nullable|exists:atividades,id',
         ]);
 
-        $evento->atividades()->create($dados);
+        $copiarDe = $dados['copiar_inscritos_de'] ?? null;
+        unset($dados['copiar_inscritos_de']);
+
+        $atividade = $evento->atividades()->create($dados);
+        $copiados = $this->copiarInscritos($copiarDe, $atividade);
 
         return redirect()
             ->route('eventos.show', $evento)
-            ->with('success', 'Momento adicionado com sucesso!');
+            ->with('success', $this->mensagemSucesso('Momento adicionado com sucesso!', $copiados));
     }
 
     public function edit(Atividade $atividade)
@@ -63,7 +72,9 @@ class AtividadeController extends Controller
             ->orderBy('nome')
             ->get(['id', 'nome', 'estado_id']);
 
-        return view('atividades.edit', compact('evento', 'atividade', 'municipios'));
+        $atividadesCopiaveis = $this->listarAtividadesCopiaveis($atividade);
+
+        return view('atividades.edit', compact('evento', 'atividade', 'municipios', 'atividadesCopiaveis'));
     }
 
     public function update(Request $request, Atividade $atividade)
@@ -72,18 +83,25 @@ class AtividadeController extends Controller
         $this->authorize('update', $evento);
 
         $dados = $request->validate([
-            'municipio_id'  => 'required|exists:municipios,id',
-            'descricao'     => 'required|string',
-            'dia'           => 'required|date',
-            'hora_inicio'   => 'required|date_format:H:i',
-            'hora_fim'      => 'required|date_format:H:i|after:hora_inicio',
+            'municipio_id'        => 'required|exists:municipios,id',
+            'descricao'           => 'required|string',
+            'dia'                 => 'required|date',
+            'hora_inicio'         => 'required|date_format:H:i',
+            'hora_fim'            => 'required|date_format:H:i|after:hora_inicio',
+            'publico_esperado'    => 'nullable|integer|min:0',
+            'carga_horaria'       => 'nullable|integer|min:0',
+            'copiar_inscritos_de' => 'nullable|exists:atividades,id',
         ]);
 
+        $copiarDe = $dados['copiar_inscritos_de'] ?? null;
+        unset($dados['copiar_inscritos_de']);
+
         $atividade->update($dados);
+        $copiados = $this->copiarInscritos($copiarDe, $atividade);
 
         return redirect()
             ->route('eventos.show', $evento)
-            ->with('success', 'Momento atualizado com sucesso!');
+            ->with('success', $this->mensagemSucesso('Momento atualizado com sucesso!', $copiados));
     }
 
     public function destroy(Atividade $atividade)
@@ -176,5 +194,69 @@ class AtividadeController extends Controller
         );
 
         return back()->with('success', 'Presença confirmada com sucesso!');
+    }
+
+    private function listarAtividadesCopiaveis(?Atividade $ignorar = null)
+    {
+        return Atividade::with('evento')
+            ->withCount('inscricoes')
+            ->whereHas('inscricoes')
+            ->when($ignorar, fn($q) => $q->where('id', '!=', $ignorar->id))
+            ->orderByDesc('dia')
+            ->orderBy('hora_inicio')
+            ->get();
+    }
+
+    private function copiarInscritos(?int $origemId, Atividade $destino): int
+    {
+        if (!$origemId || $origemId === $destino->id) {
+            return 0;
+        }
+
+        $origem = Atividade::find($origemId);
+        if (!$origem) {
+            return 0;
+        }
+
+        $inscricoes = Inscricao::withTrashed()
+            ->where('atividade_id', $origem->id)
+            ->get();
+
+        $copiados = 0;
+        foreach ($inscricoes as $inscricao) {
+            $existente = Inscricao::withTrashed()
+                ->where('atividade_id', $destino->id)
+                ->where('participante_id', $inscricao->participante_id)
+                ->first();
+
+            if ($existente) {
+                $existente->evento_id = $destino->evento_id;
+                if ($existente->trashed()) {
+                    $existente->restore();
+                    $copiados++;
+                }
+                $existente->save();
+                continue;
+            }
+
+            Inscricao::create([
+                'evento_id'       => $destino->evento_id,
+                'atividade_id'    => $destino->id,
+                'participante_id' => $inscricao->participante_id,
+            ]);
+            $copiados++;
+        }
+
+        return $copiados;
+    }
+
+    private function mensagemSucesso(string $mensagem, int $copiados = 0): string
+    {
+        if ($copiados <= 0) {
+            return $mensagem;
+        }
+
+        $sufixo = $copiados === 1 ? ' 1 inscrito copiado.' : " {$copiados} inscritos copiados.";
+        return $mensagem . $sufixo;
     }
 }
