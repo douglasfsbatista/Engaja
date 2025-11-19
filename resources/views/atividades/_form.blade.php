@@ -1,4 +1,4 @@
-@csrf
+﻿@csrf
 
 {{-- Momento --}}
 <div class="mb-3">
@@ -75,6 +75,33 @@
     @error('carga_horaria') <div class="invalid-feedback">{{ $message }}</div> @enderror
   </div>
 </div>
+
+@php
+  $listaCopiaveis = collect($atividadesCopiaveis ?? []);
+@endphp
+@if($listaCopiaveis->isNotEmpty())
+  <div class="mt-3">
+    <label for="copiar_inscritos_de" class="form-label">Importar inscritos</label>
+    <select name="copiar_inscritos_de" id="copiar_inscritos_de" class="form-select @error('copiar_inscritos_de') is-invalid @enderror">
+      <option value="">Não importar inscritos</option>
+      @foreach($listaCopiaveis as $momentoCopiavel)
+        @php
+          $eventoNome = $momentoCopiavel->evento->nome ?? 'Evento sem título';
+          $descricao = $momentoCopiavel->descricao ?: 'Momento';
+          $dia = $momentoCopiavel->dia ? \Carbon\Carbon::parse($momentoCopiavel->dia)->format('d/m/Y') : 'Sem data';
+          $hora = $momentoCopiavel->hora_inicio ? \Carbon\Carbon::parse($momentoCopiavel->hora_inicio)->format('H:i') : null;
+          $inscritos = $momentoCopiavel->inscricoes_count ?? $momentoCopiavel->inscricoes()->count();
+          $label = $eventoNome . ' — ' . $descricao . ' (' . $dia . ($hora ? ' • ' . $hora : '') . ') — ' . $inscritos . ' inscrito' . ($inscritos == 1 ? '' : 's');
+        @endphp
+        <option value="{{ $momentoCopiavel->id }}" @selected(old('copiar_inscritos_de') == $momentoCopiavel->id)>
+          {{ $label }}
+        </option>
+      @endforeach
+    </select>
+    <div class="form-text">Duplicaremos todos os participantes desse momento no ato do salvamento.</div>
+    @error('copiar_inscritos_de') <div class="invalid-feedback">{{ $message }}</div> @enderror
+  </div>
+@endif
 
 <div class="d-flex justify-content-end gap-2 mt-3">
   <a href="{{ route('eventos.atividades.index', $evento) }}" class="btn btn-outline-secondary">Cancelar</a>
