@@ -10,13 +10,6 @@
       <p class="text-muted mb-0">Conte-nos como foi a experiência neste momento.</p>
     </div>
 
-    @if(session('success'))
-      <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-      </div>
-    @endif
-
     @if($errors->any())
       <div class="alert alert-danger">
         <strong>Ops!</strong> Verifique os campos destacados e tente novamente.
@@ -34,8 +27,7 @@
         @endphp
 
         <div class="mb-4">
-          <p class="mb-0"><strong>Participante:</strong> {{ $participanteNome ?? '—' }}</p>
-          <p class="mb-0"><strong>Ação pedagógica:</strong> {{ $eventoNome ?? '—' }}</p>
+          <p class="mb-0"><strong>Ação pedagógica:</strong> {{ $eventoNome ?? '-' }}</p>
         </div>
 
         @if(empty($token))

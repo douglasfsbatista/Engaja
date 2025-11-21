@@ -1,10 +1,12 @@
-﻿<div {{ $attributes->merge(['class' => '']) }}>
+<div {{ $attributes->merge(['class' => '']) }}>
     <h1 class="h4 fw-bold text-engaja mb-1">{{ $atividade->descricao ?? 'Momento' }}</h1>
 
     @php
         use Carbon\Carbon;
 
-        $dia = Carbon::parse($atividade->dia)->locale('pt_BR')->translatedFormat('l, d \d\e F \d\e Y');
+        $dia = Carbon::parse($atividade->dia)
+            ->locale('pt_BR')
+            ->translatedFormat('l, d \\d\\e F \\d\\e Y');
 
         $inicio = Carbon::parse($atividade->dia . ' ' . $atividade->hora_inicio);
         $fim = $atividade->hora_fim ? Carbon::parse($atividade->dia . ' ' . $atividade->hora_fim) : null;
@@ -25,18 +27,19 @@
         }
     @endphp
 
-    @if ($fim)
-        <p class="text-muted mb-1">
-            {{ $dia }} • {{ $inicio->format('H:i') }} a {{ $fim->format('H:i') }}
-            <br><span class="ms-1">Duração: {{ $duracaoLabel }}</span>
-        </p>
-    @else
-        <p class="text-muted mb-1">
-            {{ $dia }} • {{ $inicio->format('H:i') }}
-        </p>
+    @php
+        $ocultarDetalhesExtras = request()?->routeIs('presenca.confirmar');
+    @endphp
+
+    <p class="text-muted mb-1">
+        {{ $dia }} &bull; {{ $inicio->format('H:i') }}@if($fim) a {{ $fim->format('H:i') }}@endif
+    </p>
+
+    @if ($duracaoLabel)
+        <p class="text-muted mb-1">Duração: {{ $duracaoLabel }}</p>
     @endif
 
-    @if ($atividade->municipio)
+    @if (!$ocultarDetalhesExtras && $atividade->municipio)
         <p class="text-muted mb-1">Município: {{ $atividade->municipio->nome_com_estado }}</p>
     @endif
 
@@ -44,7 +47,7 @@
         <p class="text-muted mb-1">Local: {{ $atividade->local }}</p>
     @endif
 
-    @if(!is_null($atividade->publico_esperado))
+    @if(!$ocultarDetalhesExtras && !is_null($atividade->publico_esperado))
         <p class="text-muted mb-1">
             Público esperado: {{ number_format($atividade->publico_esperado, 0, ',', '.') }}
         </p>
@@ -54,7 +57,8 @@
         $carga = $atividade->carga_horaria;
         $cargaFormatada = !is_null($carga) ? number_format($carga, 0, ',', '.') : null;
     @endphp
-    @if($cargaFormatada)
+
+    @if(!$ocultarDetalhesExtras && $cargaFormatada)
         <p class="text-muted mb-1">Carga horária: {{ $cargaFormatada }}h</p>
     @endif
 </div>

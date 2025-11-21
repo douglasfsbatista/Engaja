@@ -70,10 +70,14 @@ class PresencaController extends Controller
             ]);
         }
 
-        $atividade->presencas()->updateOrCreate(
+        $presenca = $atividade->presencas()->updateOrCreate(
             ['inscricao_id' => $inscricao->id],
             ['status' => 'presente']
         );
+        if (is_null($presenca->avaliacao_respondida)) {
+            $presenca->avaliacao_respondida = false;
+            $presenca->save();
+        }
         $dia = \Carbon\Carbon::parse($atividade->dia)
             ->locale('pt_BR')
             ->translatedFormat('l, d \\d\\e F \\d\\e Y');
@@ -85,8 +89,9 @@ class PresencaController extends Controller
                 'evento_nome' => $evento->nome,
                 'atividade_nome' => $atividade->descricao,
                 'dia' => $dia,
-                'success' => 'Presença confirmada com sucesso!',
-                'avaliacao_token' => encrypt($inscricao->id),
+                'success-presenca' => 'Presença confirmada com sucesso!',
+                'avaliacao_token' => $presenca->avaliacao_respondida ? null : encrypt($presenca->id),
+                'avaliacao_disponivel' => ! $presenca->avaliacao_respondida,
             ]);
     }
 }

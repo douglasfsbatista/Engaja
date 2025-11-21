@@ -37,33 +37,6 @@
     </div>
   </div>
 
-  @if (session('success'))
-    <script>
-      window.addEventListener('load', () => {
-        const fakeBtn = document.createElement('button');
-
-        // Passa o nome do usuário para o dataset
-        fakeBtn.dataset.user = "Presença confirmada!";
-
-
-        fakeBtn.dataset.success = `
-                                              <div class="text-center">
-                                                <i class="bi bi-check-circle-fill text-success fs-3 mb-2"></i><br>
-                                                <p class="mb-0 mt-2">
-                                                  Parabéns, {{ session('usuario_nome') }}!<br>
-                                                  Você confirmou sua presença no momento<br>
-                                                  <b>{{ session('atividade_nome') }}</b>, ação pedagógica <b>{{ session('evento_nome') }}</b>,<br>
-                                                  realizada na <b>{{ session('dia') }}</b>.
-                                                </p>
-                                              </div>
-                                            `;
-        document.body.appendChild(fakeBtn);
-        fakeBtn.click();
-        fakeBtn.remove();
-      });
-    </script>
-  @endif
-
   <div class="modal fade" id="confirmacaoPresencaModal" tabindex="-1" aria-labelledby="confirmacaoPresencaModalLabel"
     aria-hidden="true">
     @php
@@ -78,7 +51,7 @@
         </div>
 
         <div class="modal-body">
-          <div class="text-center py-2">
+        <div class="text-center pt-2 pb-3">
             <p class="mb-0 mt-2">
               Parabéns, <strong>{{ session('usuario_nome') }}</strong>!<br>
               Você confirmou sua presença no momento<br>
@@ -88,14 +61,15 @@
             </p>
           </div>
 
-          @if(isset($avaliacao))
+          @php $avaliacaoDisponivel = session('avaliacao_token') && session('avaliacao_disponivel', true); @endphp
+          @if(isset($avaliacao) && $avaliacaoDisponivel)
           <div class="text-center py-1">
-            <p class="mb-0 mt-2">Para acessar e responder o formulário de avaliação do momento {{ session('atividade_nome') }}, clique no botão abaixo.</p>
+            <p class="mb-0 mt-2">Para acessar e responder o formulário de avaliação do momento <strong>{{ session('atividade_nome') }}</strong>, clique no botão abaixo.</p>
           </div>
           @endif
         </div>
 
-        @if(isset($avaliacao))
+        @if(isset($avaliacao) && $avaliacaoDisponivel)
         <div class="modal-footer justify-content-center">
           <a class="btn btn-outline-primary" href="{{ session('avaliacao_token') ? route('avaliacao.formulario', ['avaliacao' => $avaliacao, 'token' => session('avaliacao_token')]) : route('avaliacao.formulario', $avaliacao) }}">Formulário de Avaliação</a>
         </div>
@@ -104,7 +78,7 @@
     </div>
   </div>
 
-  @if(session('success'))
+  @if(session('success-presenca'))
     <script>
       document.addEventListener('DOMContentLoaded', function () {
         const modalEl = document.getElementById('confirmacaoPresencaModal');
