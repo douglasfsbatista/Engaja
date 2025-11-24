@@ -21,7 +21,7 @@
                 @enderror
               </div>
               <div class="d-flex justify-content-end">
-                <button type="submit" class="btn btn-primary">Confirmar Presença</button>
+                <button type="submit" class="btn btn-primary">Confirmar Presença / Realizar Avaliação</button>
               </div>
 
               {{-- @if (session('show_register_button') && session('error'))

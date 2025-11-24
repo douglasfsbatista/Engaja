@@ -10,6 +10,7 @@ class RespostaAvaliacao extends Model
     protected $fillable = [
         'avaliacao_id',
         'avaliacao_questao_id',
+        'submissao_avaliacao_id',
         'resposta',
     ];
 
@@ -21,6 +22,11 @@ class RespostaAvaliacao extends Model
     public function avaliacaoQuestao(): BelongsTo
     {
         return $this->belongsTo(AvaliacaoQuestao::class);
+    }
+
+    public function submissaoAvaliacao(): BelongsTo
+    {
+        return $this->belongsTo(SubmissaoAvaliacao::class);
     }
 
 }

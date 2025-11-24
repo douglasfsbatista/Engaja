@@ -10,6 +10,7 @@ use App\Models\Escala;
 use App\Models\Inscricao;
 use App\Models\Presenca;
 use App\Models\RespostaAvaliacao;
+use App\Models\SubmissaoAvaliacao;
 use App\Models\TemplateAvaliacao;
 use App\ViewModels\Avaliacao\QuestoesFormViewModel;
 use Illuminate\Http\Request;
@@ -32,8 +33,7 @@ class AvaliacaoController extends Controller
             'inscricao.evento',
             'atividade.evento',
             'templateAvaliacao',
-            'respostas.inscricao.participante.user',
-            'respostas.inscricao.evento',
+            'respostas.submissaoAvaliacao',
         ]);
 
         $searchTerm = trim((string) $request->query('search', ''));
@@ -807,13 +807,13 @@ class AvaliacaoController extends Controller
         if (! $presenca) {
             return redirect()
                 ->route('avaliacao.formulario', ['avaliacao' => $avaliacao->id, 'token' => $token])
-                ->withErrors(['token' => 'Não encontramos sua inscrição para esta avaliação. Confirme a presença novamente.']);
+                ->withErrors(['token' => 'Nao encontramos sua inscricao para esta avaliacao. Confirme a presenca novamente.']);
         }
 
         if ($presenca->avaliacao_respondida) {
             return redirect()
                 ->route('avaliacao.formulario', ['avaliacao' => $avaliacao->id, 'token' => $token])
-                ->withErrors(['avaliacao' => 'Você já respondeu este formulário.']);
+                ->withErrors(['avaliacao' => 'Voce ja respondeu este formulario.']);
         }
 
         $rules = [];
@@ -824,27 +824,36 @@ class AvaliacaoController extends Controller
         $dados = $request->validate($rules);
         $respostas = $dados['respostas'] ?? [];
 
-        foreach ($avaliacao->avaliacaoQuestoes as $questao) {
-            $valor = $respostas[$questao->id] ?? null;
+        DB::transaction(function () use ($avaliacao, $presenca, $respostas) {
+            $submissao = SubmissaoAvaliacao::create([
+                'codigo' => (string) Str::ulid(),
+                'atividade_id' => $avaliacao->atividade_id,
+                'avaliacao_id' => $avaliacao->id,
+            ]);
 
-            if ($valor === null || $valor === '') {
-                continue;
+            foreach ($avaliacao->avaliacaoQuestoes as $questao) {
+                $valor = $respostas[$questao->id] ?? null;
+
+                if ($valor === null || $valor === '') {
+                    continue;
+                }
+
+                RespostaAvaliacao::create([
+                    'avaliacao_id' => $avaliacao->id,
+                    'avaliacao_questao_id' => $questao->id,
+                    'submissao_avaliacao_id' => $submissao->id,
+                    'resposta' => $valor,
+                ]);
             }
 
-            RespostaAvaliacao::create([
-                'avaliacao_id' => $avaliacao->id,
-                'avaliacao_questao_id' => $questao->id,
-                'resposta' => $valor,
-            ]);
-        }
-
-        $presenca->avaliacao_respondida = true;
-        $presenca->save();
+            $presenca->avaliacao_respondida = true;
+            $presenca->save();
+        });
 
         return redirect()
             ->route('presenca.confirmar', $presenca->atividade_id)
             ->with([
-                'success' => 'Avaliação registrada com sucesso!',
+                'success' => 'Avaliacao registrada com sucesso!',
                 'avaliacao_token' => null,
                 'avaliacao_disponivel' => false,
             ]);
