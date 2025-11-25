@@ -1,4 +1,4 @@
-﻿@csrf
+@csrf
 
 {{-- Momento --}}
 <div class="mb-3">
@@ -10,25 +10,45 @@
 </div>
 
 @php
-  $municipioSelecionado = (string) old('municipio_id', $atividade->municipio_id ?? '');
+  $municipiosSelecionados = collect(old('municipios', isset($atividade) ? $atividade->municipios->pluck('id')->all() : []))
+    ->map(fn($v) => (string) $v)
+    ->all();
 @endphp
 <div class="mb-3">
-  <label for="municipio_id" class="form-label">Município <span class="text-danger">*</span></label>
-  <select name="municipio_id" id="municipio_id"
-          class="form-select @error('municipio_id') is-invalid @enderror" required>
-    <option value="">Selecione...</option>
+  <label for="municipios" class="form-label">Municípios <span class="text-danger">*</span></label>
+  <select name="municipios[]" id="municipios" multiple
+          class="form-select @error('municipios') is-invalid @enderror @error('municipios.*') is-invalid @enderror"
+          size="6">
     @foreach($municipios ?? [] as $m)
       @php
         $uf = $m->estado->sigla ?? '';
-        $label = trim($m->nome . ($uf ? ' - ' . $uf : ''));
+        $regiao = $m->estado->regiao->nome ?? '';
+        $label = trim(($regiao ? $regiao . ' — ' : '') . $m->nome . ($uf ? ' - ' . $uf : ''));
       @endphp
-      <option value="{{ $m->id }}" @selected($municipioSelecionado === (string) $m->id)>
+      <option value="{{ $m->id }}" @selected(in_array((string) $m->id, $municipiosSelecionados, true))>
         {{ $label }}
       </option>
     @endforeach
   </select>
-  @error('municipio_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+  <div class="form-text">Selecione um ou mais municípios atendidos por este momento.</div>
+  @error('municipios') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+  @error('municipios.*') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
 </div>
+
+<script>
+  // Permite selecionar/deselecionar vários itens sem precisar segurar Ctrl/Cmd.
+  document.addEventListener('DOMContentLoaded', function () {
+    const select = document.getElementById('municipios');
+    if (!select) return;
+    select.addEventListener('mousedown', function (e) {
+      if (e.target.tagName === 'OPTION') {
+        e.preventDefault();
+        const opt = e.target;
+        opt.selected = !opt.selected;
+      }
+    });
+  });
+ </script>
 
 <div class="row g-3">
   <div class="col-md-4">
@@ -91,7 +111,7 @@
           $dia = $momentoCopiavel->dia ? \Carbon\Carbon::parse($momentoCopiavel->dia)->format('d/m/Y') : 'Sem data';
           $hora = $momentoCopiavel->hora_inicio ? \Carbon\Carbon::parse($momentoCopiavel->hora_inicio)->format('H:i') : null;
           $inscritos = $momentoCopiavel->inscricoes_count ?? $momentoCopiavel->inscricoes()->count();
-          $label = $eventoNome . ' — ' . $descricao . ' (' . $dia . ($hora ? ' • ' . $hora : '') . ') — ' . $inscritos . ' inscrito' . ($inscritos == 1 ? '' : 's');
+          $label = $eventoNome . ' - ' . $descricao . ' (' . $dia . ($hora ? ' • ' . $hora : '') . ') - ' . $inscritos . ' inscrito' . ($inscritos == 1 ? '' : 's');
         @endphp
         <option value="{{ $momentoCopiavel->id }}" @selected(old('copiar_inscritos_de') == $momentoCopiavel->id)>
           {{ $label }}

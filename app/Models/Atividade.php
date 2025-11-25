@@ -35,6 +35,12 @@ class Atividade extends Model
         return $this->belongsTo(Municipio::class);
     }
 
+    public function municipios(): BelongsToMany
+    {
+        return $this->belongsToMany(Municipio::class, 'atividade_municipio')
+            ->withTimestamps();
+    }
+
     public function presencas()
     {
         return $this->hasMany(Presenca::class);

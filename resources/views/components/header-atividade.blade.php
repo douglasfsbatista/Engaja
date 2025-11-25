@@ -25,10 +25,11 @@
             $m = $mins % 60;
             $duracaoLabel = $h > 0 ? $h . 'h' . ($m ? ' ' . $m . 'min' : '') : $m . 'min';
         }
-    @endphp
 
-    @php
         $ocultarDetalhesExtras = request()?->routeIs('presenca.confirmar');
+        $munLabel = $atividade->municipios && $atividade->municipios->isNotEmpty()
+            ? $atividade->municipios->map(fn($m) => $m->nome_com_estado ?? $m->nome)->join(', ')
+            : null;
     @endphp
 
     <p class="text-muted mb-1">
@@ -39,8 +40,8 @@
         <p class="text-muted mb-1">Duração: {{ $duracaoLabel }}</p>
     @endif
 
-    @if (!$ocultarDetalhesExtras && $atividade->municipio)
-        <p class="text-muted mb-1">Município: {{ $atividade->municipio->nome_com_estado }}</p>
+    @if (!$ocultarDetalhesExtras && $munLabel)
+        <p class="text-muted mb-1">Município: {{ $munLabel }}</p>
     @endif
 
     @if ($atividade->local)

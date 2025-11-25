@@ -23,7 +23,7 @@
             <th>Dia</th>
             <th>Hora início</th>
             <th>Hora de término</th>
-            <th>Município</th>
+            <th>Municípios</th>
             <th>Público esperado</th>
             <th>Carga horária</th>
             @hasanyrole('administrador|formador')
@@ -34,11 +34,16 @@
         @php $temPermissao = auth()->user()?->hasAnyRole('administrador', 'formador'); @endphp
         <tbody>
           @forelse($atividades as $at)
+            @php
+              $munLabel = $at->municipios->isNotEmpty()
+                ? $at->municipios->map(fn($m) => $m->nome_com_estado ?? $m->nome)->join(', ')
+                : '-';
+            @endphp
             <tr>
               <td>{{ \Carbon\Carbon::parse($at->dia)->format('d/m/Y') }}</td>
               <td>{{ \Carbon\Carbon::parse($at->hora_inicio)->format('H:i') }}</td>
               <td>{{ \Carbon\Carbon::parse($at->hora_fim)->format('H:i') }}</td>
-              <td>{{ $at->municipio?->nome_com_estado ?? '-' }}</td>
+              <td>{{ $munLabel }}</td>
               <td>{{ $at->publico_esperado ? number_format($at->publico_esperado, 0, ',', '.') : '—' }}</td>
               <td>
                 @php

@@ -18,7 +18,7 @@ class AtividadeController extends Controller
     public function index(Evento $evento)
     {
         $atividades = $evento->atividades()
-            ->with('municipio.estado')
+            ->with('municipios.estado')
             ->orderBy('dia')
             ->orderBy('hora_inicio')
             ->paginate(12);
@@ -28,9 +28,20 @@ class AtividadeController extends Controller
     public function create(Evento $evento)
     {
         $this->authorize('update', $evento);
-        $municipios = Municipio::with('estado')
-            ->orderBy('nome')
-            ->get(['id', 'nome', 'estado_id']);
+        $municipios = Municipio::with(['estado.regiao'])
+            ->get(['id', 'nome', 'estado_id'])
+            ->sortBy(function ($m) {
+                $regiao = $m->estado->regiao->nome ?? '';
+                $regiaoLower = mb_strtolower(trim($regiao));
+                $ordemRegiao = match ($regiaoLower) {
+                    'nordeste i', 'nordeste 1'  => 1,
+                    'nordeste ii', 'nordeste 2' => 2,
+                    'norte'                     => 3,
+                    default                     => 9,
+                };
+                return sprintf('%02d-%s', $ordemRegiao, $m->nome);
+            })
+            ->values();
 
         $atividadesCopiaveis = $this->listarAtividadesCopiaveis();
 
@@ -42,7 +53,8 @@ class AtividadeController extends Controller
         $this->authorize('update', $evento);
 
         $dados = $request->validate([
-            'municipio_id'        => 'required|exists:municipios,id',
+            'municipios'          => 'required|array|min:1',
+            'municipios.*'        => 'exists:municipios,id',
             'descricao'           => 'required|string',
             'dia'                 => 'required|date',
             'hora_inicio'         => 'required|date_format:H:i',
@@ -54,8 +66,14 @@ class AtividadeController extends Controller
 
         $copiarDe = $dados['copiar_inscritos_de'] ?? null;
         unset($dados['copiar_inscritos_de']);
+        $municipiosSelecionados = $dados['municipios'];
+        unset($dados['municipios']);
+
+        // Mantém o campo legado municipio_id preenchido com o primeiro selecionado (para compatibilidade).
+        $dados['municipio_id'] = $municipiosSelecionados[0] ?? null;
 
         $atividade = $evento->atividades()->create($dados);
+        $atividade->municipios()->sync($municipiosSelecionados);
         $copiados = $this->copiarInscritos($copiarDe, $atividade);
 
         return redirect()
@@ -68,9 +86,22 @@ class AtividadeController extends Controller
         $evento = $atividade->evento;
         $this->authorize('update', $evento);
 
-        $municipios = Municipio::with('estado')
-            ->orderBy('nome')
-            ->get(['id', 'nome', 'estado_id']);
+        $atividade->load('municipios');
+
+        $municipios = Municipio::with(['estado.regiao'])
+            ->get(['id', 'nome', 'estado_id'])
+            ->sortBy(function ($m) {
+                $regiao = $m->estado->regiao->nome ?? '';
+                $regiaoLower = mb_strtolower(trim($regiao));
+                $ordemRegiao = match ($regiaoLower) {
+                    'nordeste i', 'nordeste 1'  => 1,
+                    'nordeste ii', 'nordeste 2' => 2,
+                    'norte'                     => 3,
+                    default                     => 9,
+                };
+                return sprintf('%02d-%s', $ordemRegiao, $m->nome);
+            })
+            ->values();
 
         $atividadesCopiaveis = $this->listarAtividadesCopiaveis($atividade);
 
@@ -83,7 +114,8 @@ class AtividadeController extends Controller
         $this->authorize('update', $evento);
 
         $dados = $request->validate([
-            'municipio_id'        => 'required|exists:municipios,id',
+            'municipios'          => 'required|array|min:1',
+            'municipios.*'        => 'exists:municipios,id',
             'descricao'           => 'required|string',
             'dia'                 => 'required|date',
             'hora_inicio'         => 'required|date_format:H:i',
@@ -95,8 +127,13 @@ class AtividadeController extends Controller
 
         $copiarDe = $dados['copiar_inscritos_de'] ?? null;
         unset($dados['copiar_inscritos_de']);
+        $municipiosSelecionados = $dados['municipios'];
+        unset($dados['municipios']);
+
+        $dados['municipio_id'] = $municipiosSelecionados[0] ?? null;
 
         $atividade->update($dados);
+        $atividade->municipios()->sync($municipiosSelecionados);
         $copiados = $this->copiarInscritos($copiarDe, $atividade);
 
         return redirect()
@@ -116,7 +153,7 @@ class AtividadeController extends Controller
 
     public function show(\App\Models\Atividade $atividade)
     {
-        $atividade->load(['evento', 'municipio.estado']);
+        $atividade->load(['evento', 'municipios.estado']);
 
         $presencas = $atividade->presencas()
             ->with([

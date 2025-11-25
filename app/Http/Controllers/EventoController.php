@@ -96,7 +96,7 @@ class EventoController extends Controller
             'eixo',
             'user',
             'atividades' => fn($q) => $q
-                ->with('municipio.estado')
+                ->with('municipios.estado')
                 ->orderBy('dia')
                 ->orderBy('hora_inicio'),
         ]);

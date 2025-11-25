@@ -7,7 +7,11 @@
       <h1 class="h3 fw-bold text-engaja mb-1">
         Avaliação — {{ $atividade->descricao }}
       </h1>
-      <p class="text-muted mb-0">Conte-nos como foi a experiência neste momento.</p>
+      <p class="text-muted mb-0" style="text-align: justify">Convidamos você a responder esta avaliação, expressando as suas opiniões, 
+                                críticas e sugestões. Este formulário é totalmente anônimo e os dados coletados 
+                                seguem as diretrizes da Lei Geral de Proteção de Dados (LGPD). Suas respostas contribuirão para o 
+                                aprimoramento do nosso trabalho.
+                              </p>
     </div>
 
     @if($errors->any())

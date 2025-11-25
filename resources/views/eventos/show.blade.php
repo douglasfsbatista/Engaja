@@ -375,7 +375,9 @@
 
               $momento = trim($at->descricao ?? '') !== '' ? $at->descricao : 'Momento';
               $local = $at->local ?? null;
-              $municipio = optional($at->municipio)->nome_com_estado;
+              $municipio = $at->municipios->isNotEmpty()
+                ? $at->municipios->map(fn($m) => $m->nome_com_estado ?? $m->nome)->join(', ')
+                : null;
               $publicoEsperado = $at->publico_esperado;
               $cargaHoraria = $at->carga_horaria;
               $cargaLabel = !is_null($cargaHoraria) ? number_format($cargaHoraria, 0, ',', '.') . 'h' : null;
