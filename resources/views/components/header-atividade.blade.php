@@ -26,29 +26,31 @@
             $duracaoLabel = $h > 0 ? $h . 'h' . ($m ? ' ' . $m . 'min' : '') : $m . 'min';
         }
 
-        $ocultarDetalhesExtras = request()?->routeIs('presenca.confirmar');
+        $presencaPage = request()?->routeIs('presenca.confirmar');
         $munLabel = $atividade->municipios && $atividade->municipios->isNotEmpty()
             ? $atividade->municipios->map(fn($m) => $m->nome_com_estado ?? $m->nome)->join(', ')
             : null;
     @endphp
 
     <p class="text-muted mb-1">
-        {{ $dia }} &bull; {{ $inicio->format('H:i') }}@if($fim) a {{ $fim->format('H:i') }}@endif
+        {{ $dia }}@unless($presencaPage) &bull; {{ $inicio->format('H:i') }}@if($fim) a {{ $fim->format('H:i') }}@endif @endunless
     </p>
 
-    @if ($duracaoLabel)
-        <p class="text-muted mb-1">Duração: {{ $duracaoLabel }}</p>
+    @if ($munLabel)
+        <p class="text-muted mb-1">Município(s): {{ $munLabel }}</p>
     @endif
 
-    @if (!$ocultarDetalhesExtras && $munLabel)
-        <p class="text-muted mb-1">Município: {{ $munLabel }}</p>
-    @endif
+    @unless($presencaPage)
+        @if ($duracaoLabel)
+            <p class="text-muted mb-1">Duração: {{ $duracaoLabel }}</p>
+        @endif
 
-    @if ($atividade->local)
-        <p class="text-muted mb-1">Local: {{ $atividade->local }}</p>
-    @endif
+        @if ($atividade->local)
+            <p class="text-muted mb-1">Local: {{ $atividade->local }}</p>
+        @endif
+    @endunless
 
-    @if(!$ocultarDetalhesExtras && !is_null($atividade->publico_esperado))
+    @if(!$presencaPage && !is_null($atividade->publico_esperado))
         <p class="text-muted mb-1">
             Público esperado: {{ number_format($atividade->publico_esperado, 0, ',', '.') }}
         </p>
@@ -59,7 +61,7 @@
         $cargaFormatada = !is_null($carga) ? number_format($carga, 0, ',', '.') : null;
     @endphp
 
-    @if(!$ocultarDetalhesExtras && $cargaFormatada)
+    @if(!$presencaPage && $cargaFormatada)
         <p class="text-muted mb-1">Carga horária: {{ $cargaFormatada }}h</p>
     @endif
 </div>

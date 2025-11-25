@@ -12,6 +12,7 @@ class PresencaController extends Controller
 {
     public function confirmarPresenca(Atividade $atividade)
     {
+        $atividade->load(['municipios.estado']);
         return view('atividades.confirmar-presenca', compact('atividade'));
     }
 
