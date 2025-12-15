@@ -54,6 +54,13 @@
           </a>
         </li>
         @endhasanyrole
+        @role('participante')
+        <li class="nav-item">
+          <a class="nav-link text-white ms-lg-2" href="{{ route('profile.certificados') }}">
+            Meus certificados
+          </a>
+        </li>
+        @endrole
         @endauth
       </ul>
 

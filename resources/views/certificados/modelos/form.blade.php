@@ -295,30 +295,71 @@
     };
 
     const loadImage = (url) => {
+      // Sempre desenha guias e texto, mesmo que não haja imagem
+      drawGuides();
+      ensureText();
+
+      const fallbackSize = () => {
+        const targetW = (container?.clientWidth ?? 960) - 24;
+        const targetH = Math.round(targetW * 0.6);
+        canvas.setWidth(targetW);
+        canvas.setHeight(targetH);
+        if (container) container.style.height = `${targetH}px`;
+      };
+
       if (!url) {
-        drawGuides();
-        ensureText();
+        fallbackSize();
         canvas.renderAll();
         return;
       }
-      fabric.Image.fromURL(url, (img) => {
-        const maxW = 800;
-        const scale = Math.min(1, maxW / img.width);
-        img.scale(scale);
-        const cw = img.width * scale;
-        const ch = img.height * scale;
-        canvas.setWidth(cw);
-        canvas.setHeight(ch);
-        drawGuides();
-        img.set({
-          left: canvas.getWidth() / 2,
-          top: canvas.getHeight() / 2,
-          originX: 'center',
-          originY: 'center',
+
+      const absoluteUrl = url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`;
+      const imgEl = new Image();
+      imgEl.crossOrigin = 'anonymous';
+      imgEl.onload = () => {
+        const targetW = (container?.clientWidth ?? 960) - 24;
+        const maxH = 620;
+        const scale = Math.min(
+          targetW / imgEl.naturalWidth,
+          maxH / imgEl.naturalHeight,
+          1
+        );
+        const targetH = imgEl.naturalHeight * scale;
+
+        canvas.setWidth(targetW);
+        canvas.setHeight(targetH);
+        if (container) container.style.height = `${targetH}px`;
+
+        const fabricImg = new fabric.Image(imgEl, {
+          originX: 'left',
+          originY: 'top',
+          left: 0,
+          top: 0,
+          selectable: false,
+          evented: false,
+          scaleX: scale,
+          scaleY: scale,
         });
-        canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
+
+        canvas.setBackgroundImage(fabricImg, canvas.renderAll.bind(canvas), {
+          originX: 'left',
+          originY: 'top',
+          left: 0,
+          top: 0,
+        });
+        drawGuides();
+        if (textObj) {
+          textObj.text = textArea.value || 'Texto';
+        }
+        canvas.renderAll();
+      };
+      imgEl.onerror = () => {
+        fallbackSize();
+        drawGuides();
         ensureText();
-      }, { crossOrigin: 'anonymous' });
+        canvas.renderAll();
+      };
+      imgEl.src = absoluteUrl;
     };
 
     textArea.addEventListener('input', () => {

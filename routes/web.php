@@ -51,6 +51,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/atividades/{atividade}/presencas/preview', [PresencaImportController::class, 'preview'])->name('atividades.presencas.preview');
     Route::post('/atividades/{atividade}/presencas/savepage', [PresencaImportController::class, 'savePage'])->name('atividades.presencas.savepage');
     Route::post('/atividades/{atividade}/presencas/confirmar', [PresencaImportController::class, 'confirmar'])->name('atividades.presencas.confirmar');
+
+    Route::get('/meus-certificados', [ProfileController::class, 'certificados'])->name('profile.certificados');
 });
 
 Route::middleware(['auth', 'role:administrador'])->group(function () {
@@ -108,6 +110,11 @@ Route::post('/eventos/cadastro-e-inscricao/store', [EventoController::class, 'st
 
 Route::get('/presenca/{atividade}/confirmar', [PresencaController::class, 'confirmarPresenca'])->name('presenca.confirmar');
 Route::post('/presenca/{atividade}/confirmar', [PresencaController::class, 'store'])->name('presenca.store');
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/meus-certificados', [ProfileController::class, 'certificados'])->name('profile.certificados');
+    Route::get('/certificados/{certificado}', [CertificadoController::class, 'show'])->name('certificados.show');
+});
 
 Route::get( '/formulario-avaliacao/{avaliacao}', [AvaliacaoController::class, 'formularioAvaliacao'])->name('avaliacao.formulario');
 Route::post('/formulario-avaliacao/{avaliacao}', [AvaliacaoController::class, 'responderFormulario'])->name('avaliacao.formulario.responder');
