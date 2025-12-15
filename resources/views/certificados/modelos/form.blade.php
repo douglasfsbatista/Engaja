@@ -237,8 +237,8 @@
       if (!textObj) return;
       xInput.value = Math.round(textObj.left ?? 0);
       yInput.value = Math.round(textObj.top ?? 0);
-      wInput.value = Math.round(textObj.getScaledWidth() ?? textObj.width ?? 0);
-      hInput.value = Math.round(textObj.getScaledHeight() ?? textObj.height ?? 0);
+      wInput.value = Math.round(textObj.width ?? 0);
+      hInput.value = Math.round(textObj.height ?? 0);
       if (canvasWInput) canvasWInput.value = Math.round(canvas.getWidth());
       if (canvasHInput) canvasHInput.value = Math.round(canvas.getHeight());
       fontFamilyInput.value = textObj.fontFamily || 'Arial';
@@ -280,8 +280,8 @@
         const w = canvas.getWidth();
         const h = canvas.getHeight();
         const threshold = 5;
-        const cx = textObj.left + textObj.getScaledWidth() / 2;
-        const cy = textObj.top + textObj.getScaledHeight() / 2;
+        const cx = textObj.left + (textObj.width || 0) / 2;
+        const cy = textObj.top + (textObj.height || 0) / 2;
         if (Math.abs(cx - w / 2) <= threshold) {
           snapGuides.push(new fabric.Line([w / 2, 0, w / 2, h], { stroke: '#f97316', selectable: false, evented: false }));
         }
@@ -292,10 +292,15 @@
         canvas.renderAll();
       };
 
-      textObj.on('modified', () => { updateHidden(); showSnap(); });
+      const lockScale = () => {
+        const newW = (textObj.width || 0) * (textObj.scaleX || 1);
+        const newH = (textObj.height || 0) * (textObj.scaleY || 1);
+        textObj.set({ width: newW, height: newH, scaleX: 1, scaleY: 1 });
+      };
+      textObj.on('modified', () => { lockScale(); updateHidden(); showSnap(); });
       textObj.on('moving', () => { updateHidden(); showSnap(); });
-      textObj.on('scaled', () => { updateHidden(); showSnap(); });
-      textObj.on('scaling', () => { updateHidden(); showSnap(); });
+      textObj.on('scaled', () => { lockScale(); updateHidden(); showSnap(); });
+      textObj.on('scaling', () => { lockScale(); updateHidden(); showSnap(); });
       textObj.on('changed', updateHidden);
       textObj.on('selection:changed', () => {
         syncToolbarWithSelection();
@@ -422,6 +427,7 @@
 
       if (selectionOnly && textObj.selectionStart !== textObj.selectionEnd && !isAlignChange) {
         textObj.setSelectionStyles(stylePayload, textObj.selectionStart, textObj.selectionEnd);
+        textObj.set(stylePayload);
       } else {
         textObj.set(stylePayload);
       }
