@@ -36,16 +36,7 @@
       height: auto;
       display: block;
     }
-    .cert-text {
-      position: absolute;
-      left: 10%;
-      top: 20%;
-      right: 10%;
-      color: #111;
-      font-size: 20px;
-      line-height: 1.4;
-      white-space: pre-wrap;
-    }
+    .cert-text { position: absolute; color: #111; line-height: 1.4; white-space: pre-wrap; }
     .actions {
       display: flex;
       gap: 10px;
@@ -84,24 +75,81 @@
         $modelo = $certificado->modelo;
         $frenteUrl = $modelo?->imagem_frente ? asset('storage/'.$modelo->imagem_frente) : '';
         $versoUrl = $modelo?->imagem_verso ? asset('storage/'.$modelo->imagem_verso) : '';
+        $layoutFrente = $modelo->layout_frente ?? [];
+        $layoutVerso  = $modelo->layout_verso ?? [];
+        $textoFrente = trim($certificado->texto_frente ?? '');
+        $textoVerso  = trim($certificado->texto_verso ?? '');
       @endphp
 
       <div class="cert-page">
         @if($frenteUrl)
           <img src="{{ $frenteUrl }}" alt="Frente" class="cert-bg">
         @endif
-        <div class="cert-text">{!! nl2br(e($certificado->texto_frente)) !!}</div>
+        <div class="cert-text"
+             data-cert-layer="frente"
+             data-layout='@json($layoutFrente)'
+             data-text="{!! nl2br(e($textoFrente)) !!}">
+          {!! nl2br(e($textoFrente)) !!}
+        </div>
       </div>
 
-      @if($versoUrl || $certificado->texto_verso)
+      @if($versoUrl || $textoVerso)
       <div class="cert-page">
         @if($versoUrl)
           <img src="{{ $versoUrl }}" alt="Verso" class="cert-bg">
         @endif
-        <div class="cert-text">{!! nl2br(e($certificado->texto_verso)) !!}</div>
+        <div class="cert-text"
+             data-cert-layer="verso"
+             data-layout='@json($layoutVerso)'
+             data-text="{!! nl2br(e($textoVerso)) !!}">
+          {!! nl2br(e($textoVerso)) !!}
+        </div>
       </div>
       @endif
     </div>
   </div>
+
+  <script>
+    function applyLayout(layer) {
+      const page = layer.closest('.cert-page');
+      const img = page ? page.querySelector('.cert-bg') : null;
+      const layout = layer.dataset.layout ? JSON.parse(layer.dataset.layout) : {};
+      const apply = () => {
+        const cw = Number(layout.canvas_w || img?.naturalWidth || img?.clientWidth || 1);
+        const ch = Number(layout.canvas_h || img?.naturalHeight || img?.clientHeight || 1);
+        const scaleW = (img?.clientWidth || cw) / cw;
+        const scaleH = (img?.clientHeight || ch) / ch;
+        const scale = Math.min(scaleW || 1, scaleH || 1);
+        const x = (layout.x || 0) * scale;
+        const y = (layout.y || 0) * scale;
+        const w = (layout.w || 0) * scale;
+        const h = (layout.h || 0) * scale;
+        const fs = (layout.font_size || 20) * scale;
+        const ff = layout.font_family || 'Arial';
+        const fw = layout.font_weight || 'normal';
+        const fst = layout.font_style || 'normal';
+        const align = layout.align || 'left';
+
+        layer.style.left = `${x}px`;
+        layer.style.top = `${y}px`;
+        layer.style.fontSize = `${fs}px`;
+        layer.style.fontFamily = ff;
+        layer.style.fontWeight = fw;
+        layer.style.fontStyle = fst;
+        layer.style.textAlign = align;
+        layer.style.width = w > 0 ? `${w}px` : 'auto';
+        layer.style.height = h > 0 ? `${h}px` : 'auto';
+      };
+      if (img) {
+        if (img.complete) apply(); else img.onload = apply;
+      } else {
+        apply();
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('[data-cert-layer]').forEach(layer => applyLayout(layer));
+    });
+  </script>
 </body>
 </html>

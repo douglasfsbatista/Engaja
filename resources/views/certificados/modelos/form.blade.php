@@ -67,6 +67,8 @@
       <input type="hidden" name="layout_frente[y]" id="layout_frente_y" value="{{ old('layout_frente.y', $modelo->layout_frente['y'] ?? '') }}">
       <input type="hidden" name="layout_frente[w]" id="layout_frente_w" value="{{ old('layout_frente.w', $modelo->layout_frente['w'] ?? '') }}">
       <input type="hidden" name="layout_frente[h]" id="layout_frente_h" value="{{ old('layout_frente.h', $modelo->layout_frente['h'] ?? '') }}">
+      <input type="hidden" name="layout_frente[canvas_w]" id="layout_frente_canvas_w" value="{{ old('layout_frente.canvas_w', $modelo->layout_frente['canvas_w'] ?? '') }}">
+      <input type="hidden" name="layout_frente[canvas_h]" id="layout_frente_canvas_h" value="{{ old('layout_frente.canvas_h', $modelo->layout_frente['canvas_h'] ?? '') }}">
       <input type="hidden" name="layout_frente[font_family]" id="layout_frente_font_family" value="{{ old('layout_frente.font_family', $modelo->layout_frente['font_family'] ?? 'Arial') }}">
       <input type="hidden" name="layout_frente[font_size]" id="layout_frente_font_size" value="{{ old('layout_frente.font_size', $modelo->layout_frente['font_size'] ?? 22) }}">
       <input type="hidden" name="layout_frente[font_weight]" id="layout_frente_font_weight" value="{{ old('layout_frente.font_weight', $modelo->layout_frente['font_weight'] ?? 'normal') }}">
@@ -78,6 +80,8 @@
       <input type="hidden" name="layout_verso[y]" id="layout_verso_y" value="{{ old('layout_verso.y', $modelo->layout_verso['y'] ?? '') }}">
       <input type="hidden" name="layout_verso[w]" id="layout_verso_w" value="{{ old('layout_verso.w', $modelo->layout_verso['w'] ?? '') }}">
       <input type="hidden" name="layout_verso[h]" id="layout_verso_h" value="{{ old('layout_verso.h', $modelo->layout_verso['h'] ?? '') }}">
+      <input type="hidden" name="layout_verso[canvas_w]" id="layout_verso_canvas_w" value="{{ old('layout_verso.canvas_w', $modelo->layout_verso['canvas_w'] ?? '') }}">
+      <input type="hidden" name="layout_verso[canvas_h]" id="layout_verso_canvas_h" value="{{ old('layout_verso.canvas_h', $modelo->layout_verso['canvas_h'] ?? '') }}">
       <input type="hidden" name="layout_verso[font_family]" id="layout_verso_font_family" value="{{ old('layout_verso.font_family', $modelo->layout_verso['font_family'] ?? 'Arial') }}">
       <input type="hidden" name="layout_verso[font_size]" id="layout_verso_font_size" value="{{ old('layout_verso.font_size', $modelo->layout_verso['font_size'] ?? 22) }}">
       <input type="hidden" name="layout_verso[font_weight]" id="layout_verso_font_weight" value="{{ old('layout_verso.font_weight', $modelo->layout_verso['font_weight'] ?? 'normal') }}">
@@ -143,6 +147,8 @@
 </div>
 
 @push('scripts')
+{{-- Carrega Fabric somente nesta tela de modelo de certificado --}}
+<script src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></script>
 <script>
   function simplePreview(inputId, previewWrapperId) {
     const input = document.getElementById(inputId);
@@ -173,6 +179,7 @@
     const {
       canvasId, fileInputId, textareaId,
       xInputId, yInputId, wInputId, hInputId,
+      canvasWInputId, canvasHInputId,
       fontFamilyInputId, fontSizeInputId, fontWeightInputId, fontStyleInputId, alignInputId, stylesInputId,
       existingUrl, toolbar
     } = opts;
@@ -185,6 +192,8 @@
     const yInput = document.getElementById(yInputId);
     const wInput = document.getElementById(wInputId);
     const hInput = document.getElementById(hInputId);
+    const canvasWInput = document.getElementById(canvasWInputId);
+    const canvasHInput = document.getElementById(canvasHInputId);
     const fontFamilyInput = document.getElementById(fontFamilyInputId);
     const fontSizeInput = document.getElementById(fontSizeInputId);
     const fontWeightInput = document.getElementById(fontWeightInputId);
@@ -230,6 +239,8 @@
       yInput.value = Math.round(textObj.top ?? 0);
       wInput.value = Math.round(textObj.getScaledWidth() ?? textObj.width ?? 0);
       hInput.value = Math.round(textObj.getScaledHeight() ?? textObj.height ?? 0);
+      if (canvasWInput) canvasWInput.value = Math.round(canvas.getWidth());
+      if (canvasHInput) canvasHInput.value = Math.round(canvas.getHeight());
       fontFamilyInput.value = textObj.fontFamily || 'Arial';
       fontSizeInput.value = Math.round(textObj.fontSize || 22);
       fontWeightInput.value = textObj.fontWeight || 'normal';
@@ -304,6 +315,8 @@
         const targetH = Math.round(targetW * 0.6);
         canvas.setWidth(targetW);
         canvas.setHeight(targetH);
+        canvasEl.style.width = `${targetW}px`;
+        canvasEl.style.height = `${targetH}px`;
         if (container) container.style.height = `${targetH}px`;
       };
 
@@ -318,17 +331,17 @@
       imgEl.crossOrigin = 'anonymous';
       imgEl.onload = () => {
         const targetW = (container?.clientWidth ?? 960) - 24;
-        const maxH = 620;
-        const scale = Math.min(
-          targetW / imgEl.naturalWidth,
-          maxH / imgEl.naturalHeight,
-          1
-        );
-        const targetH = imgEl.naturalHeight * scale;
+        const scale = Math.min(targetW / imgEl.naturalWidth, 1);
+        const imgW = imgEl.naturalWidth * scale;
+        const imgH = imgEl.naturalHeight * scale;
 
-        canvas.setWidth(targetW);
-        canvas.setHeight(targetH);
-        if (container) container.style.height = `${targetH}px`;
+        canvas.setWidth(imgW);
+        canvas.setHeight(imgH);
+        canvasEl.style.width = `${imgW}px`;
+        canvasEl.style.height = `${imgH}px`;
+        if (canvasWInput) canvasWInput.value = Math.round(imgW);
+        if (canvasHInput) canvasHInput.value = Math.round(imgH);
+        if (container) container.style.height = `${imgH}px`;
 
         const fabricImg = new fabric.Image(imgEl, {
           originX: 'left',
@@ -496,6 +509,8 @@
         yInputId: 'layout_frente_y',
         wInputId: 'layout_frente_w',
         hInputId: 'layout_frente_h',
+        canvasWInputId: 'layout_frente_canvas_w',
+        canvasHInputId: 'layout_frente_canvas_h',
         fontFamilyInputId: 'layout_frente_font_family',
         fontSizeInputId: 'layout_frente_font_size',
         fontWeightInputId: 'layout_frente_font_weight',
@@ -520,6 +535,8 @@
         yInputId: 'layout_verso_y',
         wInputId: 'layout_verso_w',
         hInputId: 'layout_verso_h',
+        canvasWInputId: 'layout_verso_canvas_w',
+        canvasHInputId: 'layout_verso_canvas_h',
         fontFamilyInputId: 'layout_verso_font_family',
         fontSizeInputId: 'layout_verso_font_size',
         fontWeightInputId: 'layout_verso_font_weight',
