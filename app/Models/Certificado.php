@@ -12,6 +12,7 @@ class Certificado extends Model
     protected $fillable = [
         'modelo_certificado_id',
         'participante_id',
+        'evento_nome',
         'codigo_validacao',
         'ano',
         'texto_frente',

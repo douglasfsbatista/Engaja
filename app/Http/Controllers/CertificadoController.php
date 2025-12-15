@@ -74,6 +74,7 @@ class CertificadoController extends Controller
                 Certificado::create([
                     'modelo_certificado_id' => $modelo->id,
                     'participante_id'       => $participante->id,
+                    'evento_nome'           => $evento->nome,
                     'codigo_validacao'      => Str::uuid()->toString(),
                     'ano'                   => (int) ($evento->data_inicio ? date('Y', strtotime($evento->data_inicio)) : date('Y')),
                     'texto_frente'          => $textoFrente,
@@ -155,6 +156,7 @@ class CertificadoController extends Controller
                 Certificado::create([
                     'modelo_certificado_id' => $modelo->id,
                     'participante_id'       => $participante->id,
+                    'evento_nome'           => $evento->nome,
                     'codigo_validacao'      => Str::uuid()->toString(),
                     'ano'                   => (int) ($evento->data_inicio ? date('Y', strtotime($evento->data_inicio)) : date('Y')),
                     'texto_frente'          => $textoFrente,
@@ -179,5 +181,16 @@ class CertificadoController extends Controller
     private function renderPlaceholders(string $texto, array $map): string
     {
         return strtr($texto, $map);
+    }
+
+    public function show(Certificado $certificado)
+    {
+        $user = auth()->user();
+        if ($certificado->participante_id !== $user->participante?->id) {
+            abort(403);
+        }
+        $certificado->load('modelo');
+
+        return view('certificados.show', compact('certificado'));
     }
 }
