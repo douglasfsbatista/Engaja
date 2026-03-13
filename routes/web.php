@@ -146,7 +146,11 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/', 'store')->name('store');
             Route::get('/edit', 'edit')->name('edit');
             Route::put('/', 'update')->name('update');
+            Route::get('/pdf', 'downloadOwn')->name('download-own');
         });
+
+    Route::get('/relatorios-avaliacao/{relatorio}/pdf', [AvaliacaoAtividadeController::class, 'download'])
+        ->name('avaliacao-atividade.download');
 });
 
 Route::middleware(['auth', 'role:administrador|gerente'])->group(function () {

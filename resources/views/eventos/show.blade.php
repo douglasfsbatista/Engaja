@@ -454,7 +454,7 @@
                               ? route('avaliacao-atividade.edit',   $at)
                               : route('avaliacao-atividade.create', $at) }}"
                            class="btn btn-sm {{ $at->avaliacaoAtividade ? 'btn-warning' : 'btn-outline-warning' }}">
-                          📝 {{ $at->avaliacaoAtividade ? 'Avaliação' : 'Avaliar' }}
+                          📝 {{ $at->avaliacaoAtividade ? 'Relatório' : 'Criar relatório' }}
                         </a>
                       @endhasanyrole
 

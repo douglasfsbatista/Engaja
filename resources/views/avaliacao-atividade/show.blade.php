@@ -20,13 +20,16 @@
 <div class="container py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
         <div>
-            <h1 class="h4 fw-bold text-engaja mb-1">Visualização do Relatório de Avaliação da Ação</h1>
+            <h1 class="h4 fw-bold text-engaja mb-1">Visualização do Relatório da Ação</h1>
             <p class="text-muted mb-0">
                 Relatório preenchido por {{ $nomeResponsavel }}
             </p>
         </div>
         <a href="{{ route('avaliacao-atividade.index') }}" class="btn btn-outline-secondary">
             Voltar para relatórios
+        </a>
+        <a href="{{ route('avaliacao-atividade.download', $relatorio) }}" class="btn btn-outline-dark" target="_blank">
+            Baixar PDF
         </a>
     </div>
 

@@ -101,7 +101,7 @@
               <path d="M3 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6.5L8.5 2zM8 3.5V7a1 1 0 0 0 1 1h3.5"/>
             </svg>
           </span>
-          <span class="admin-nav-text">Avaliação da ação</span>
+          <span class="admin-nav-text">Relatórios da ação</span>
         </a>
       @endhasanyrole
     </div>

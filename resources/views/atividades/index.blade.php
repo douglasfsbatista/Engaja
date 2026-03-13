@@ -75,8 +75,8 @@
                         ? route('avaliacao-atividade.edit',   $at) 
                         : route('avaliacao-atividade.create', $at) }}"
                    class="btn btn-sm {{ $minhaAvaliacaoAtividade ? 'btn-warning' : 'btn-outline-warning' }}"
-                   title="{{ $minhaAvaliacaoAtividade ? 'Editar minha avaliação' : 'Criar minha avaliação' }}">
-                   📋 {{ $minhaAvaliacaoAtividade ? 'Minha avaliação' : 'Avaliar' }}
+                   title="{{ $minhaAvaliacaoAtividade ? 'Editar meu relatório' : 'Criar meu relatório' }}">
+                   📋 {{ $minhaAvaliacaoAtividade ? 'Meu relatório' : 'Criar relatório' }}
                 </a>
 
                 <form class="d-inline" method="POST" action="{{ route('atividades.destroy', $at) }}"
