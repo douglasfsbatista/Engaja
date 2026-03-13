@@ -24,6 +24,7 @@ class UserManagementController extends Controller
     private const PROTECTED_ROLES = ['administrador'];
 
     private const LEGACY_ROLES = ['gestor', 'formador'];
+    private const EMAIL_SIMILARITY_THRESHOLD = 0.85;
 
     public function index(Request $request): View
     {
@@ -268,41 +269,294 @@ class UserManagementController extends Controller
 
     private function montarResumoVerificacao(Collection $rows): array
     {
-        $rowsUnicosPorEmail = $rows
-            ->filter(function ($row) {
-                $email = strtolower(trim((string) ($row['email'] ?? '')));
-                return $email !== '';
+        $rowsNormalizados = $rows
+            ->values()
+            ->map(function ($row) {
+                $emailNormalizado = $this->normalizarEmail((string) ($row['email'] ?? ''));
+                $cpfNormalizado = $this->normalizarCpf($row['cpf'] ?? null);
+                $nomeNormalizado = $this->normalizarNome($row['nome'] ?? null);
+
+                return [
+                    'row' => $row,
+                    'nome_normalizado' => $nomeNormalizado,
+                    'email_normalizado' => $emailNormalizado,
+                    'cpf_normalizado' => $cpfNormalizado,
+                ];
             })
-            ->groupBy(fn($row) => strtolower(trim((string) ($row['email'] ?? ''))))
-            ->map(fn($grupo) => $grupo->first())
             ->values();
 
-        $emailsImportacao = $rowsUnicosPorEmail
-            ->map(fn($row) => strtolower(trim((string) ($row['email'] ?? ''))))
+        $usuariosBase = User::query()
+            ->leftJoin('participantes', 'participantes.user_id', '=', 'users.id')
+            ->select('users.name', 'users.email', 'participantes.cpf')
+            ->get();
+
+        $nomesExistentes = $usuariosBase
+            ->pluck('name')
+            ->map(fn($nome) => $this->normalizarNome($nome))
+            ->filter()
+            ->unique()
             ->values();
 
-        $emailsExistentes = $emailsImportacao->isEmpty()
-            ? collect()
-            : User::whereIn('email', $emailsImportacao)
-                ->pluck('email')
-                ->map(fn($email) => strtolower(trim((string) $email)))
-                ->unique()
-                ->values();
+        $emailsExistentes = $usuariosBase
+            ->pluck('email')
+            ->map(fn($email) => $this->normalizarEmail((string) $email))
+            ->filter()
+            ->unique()
+            ->values();
 
+        $cpfsExistentes = $usuariosBase
+            ->pluck('cpf')
+            ->map(fn($cpf) => $this->normalizarCpf($cpf))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $nomesExistentesLookup = array_fill_keys($nomesExistentes->all(), true);
         $emailsExistentesLookup = array_fill_keys($emailsExistentes->all(), true);
+        $cpfsExistentesLookup = array_fill_keys($cpfsExistentes->all(), true);
 
-        $rowsNaoCadastrados = $rowsUnicosPorEmail
-            ->filter(function ($row) use ($emailsExistentesLookup) {
-                $email = strtolower(trim((string) ($row['email'] ?? '')));
-                return !isset($emailsExistentesLookup[$email]);
-            })
-            ->values();
+        $emailsPorDominio = [];
+        foreach ($emailsExistentes as $emailExistente) {
+            [$local, $dominio] = $this->splitEmail($emailExistente);
+            if ($dominio === null) {
+                continue;
+            }
+            if (!array_key_exists($dominio, $emailsPorDominio)) {
+                $emailsPorDominio[$dominio] = [];
+            }
+            $emailsPorDominio[$dominio][] = $emailExistente;
+        }
+
+        $emailsExistentesArray = $emailsExistentes->all();
+
+        $rowsNaoCadastradosUnicos = collect();
+        $usuariosExistentes = 0;
+        $naoCadastradosKeys = [];
+
+        
+        $nomesPlanilhaLookup = [];
+        $emailsPlanilhaLookup = [];
+        $cpfsPlanilhaLookup = [];
+        $emailsPlanilhaNormalizados = [];
+
+        foreach ($rowsNormalizados as $item) {
+            $nomeNormalizado = $item['nome_normalizado'];
+            $emailNormalizado = $item['email_normalizado'];
+            $cpfNormalizado = $item['cpf_normalizado'];
+
+            $matchPorNome = ($nomeNormalizado && isset($nomesExistentesLookup[$nomeNormalizado]))
+                || ($nomeNormalizado && isset($nomesPlanilhaLookup[$nomeNormalizado]));
+            $matchPorCpf = ($cpfNormalizado && isset($cpfsExistentesLookup[$cpfNormalizado]))
+                || ($cpfNormalizado && isset($cpfsPlanilhaLookup[$cpfNormalizado]));
+            $matchPorEmailExato = ($emailNormalizado && isset($emailsExistentesLookup[$emailNormalizado]))
+                || ($emailNormalizado && isset($emailsPlanilhaLookup[$emailNormalizado]));
+            $matchPorSimilaridade = false;
+
+            if (!$matchPorNome && !$matchPorCpf && !$matchPorEmailExato && $emailNormalizado) {
+                [, $dominio] = $this->splitEmail($emailNormalizado);
+                $candidatos = ($dominio && isset($emailsPorDominio[$dominio]))
+                    ? $emailsPorDominio[$dominio]
+                    : $emailsExistentesArray;
+                $candidatos = array_merge($candidatos, $emailsPlanilhaNormalizados);
+
+                $melhorScore = 0.0;
+                foreach ($candidatos as $emailExistente) {
+                    $score = $this->similaridadeEmail($emailNormalizado, $emailExistente);
+                    if ($score > $melhorScore) {
+                        $melhorScore = $score;
+                    }
+                    if ($melhorScore >= self::EMAIL_SIMILARITY_THRESHOLD) {
+                        break;
+                    }
+                }
+
+                $matchPorSimilaridade = $melhorScore >= self::EMAIL_SIMILARITY_THRESHOLD;
+            }
+
+            $isExistente = $matchPorNome || $matchPorCpf || $matchPorEmailExato || $matchPorSimilaridade;
+
+            if ($isExistente) {
+                $usuariosExistentes++;
+                if ($nomeNormalizado) {
+                    $nomesPlanilhaLookup[$nomeNormalizado] = true;
+                }
+                if ($cpfNormalizado) {
+                    $cpfsPlanilhaLookup[$cpfNormalizado] = true;
+                }
+                if ($emailNormalizado) {
+                    $emailsPlanilhaLookup[$emailNormalizado] = true;
+                    $emailsPlanilhaNormalizados[] = $emailNormalizado;
+                }
+                continue;
+            }
+
+            $chaveNaoCadastrado = $cpfNormalizado
+                ? "cpf:{$cpfNormalizado}"
+                : ($emailNormalizado ? "email:{$emailNormalizado}" : ($nomeNormalizado ? "nome:{$nomeNormalizado}" : md5(json_encode($item['row']))));
+
+            if (!isset($naoCadastradosKeys[$chaveNaoCadastrado])) {
+                $naoCadastradosKeys[$chaveNaoCadastrado] = true;
+                $rowsNaoCadastradosUnicos->push($item['row']);
+            } else {
+                // Duplicado interno de um nao-cadastrado ja listado.
+                $usuariosExistentes++;
+            }
+
+            if ($nomeNormalizado) {
+                $nomesPlanilhaLookup[$nomeNormalizado] = true;
+            }
+            if ($cpfNormalizado) {
+                $cpfsPlanilhaLookup[$cpfNormalizado] = true;
+            }
+            if ($emailNormalizado) {
+                $emailsPlanilhaLookup[$emailNormalizado] = true;
+                $emailsPlanilhaNormalizados[] = $emailNormalizado;
+            }
+        }
 
         return [
-            'total_importacao' => $emailsImportacao->count(),
-            'usuarios_existentes' => $emailsExistentes->count(),
-            'usuarios_nao_cadastrados' => $rowsNaoCadastrados->count(),
-            'rows_nao_cadastrados' => $rowsNaoCadastrados,
+            'total_importacao' => $rowsNormalizados->count(),
+            'usuarios_existentes' => $usuariosExistentes,
+            'usuarios_nao_cadastrados' => $rowsNaoCadastradosUnicos->count(),
+            'rows_nao_cadastrados' => $rowsNaoCadastradosUnicos->values(),
         ];
+    }
+
+    private function normalizarCpf(mixed $cpf): ?string
+    {
+        if ($cpf === null) {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', (string) $cpf) ?: '';
+        if ($digits === '') {
+            return null;
+        }
+
+        return $digits;
+    }
+
+    private function normalizarEmail(string $email): ?string
+    {
+        $email = trim(mb_strtolower($email));
+        if ($email === '' || !str_contains($email, '@')) {
+            return null;
+        }
+
+        [$local, $dominio] = array_pad(explode('@', $email, 2), 2, null);
+        if (!$local || !$dominio) {
+            return null;
+        }
+
+        $dominio = str_replace(' ', '', $dominio);
+        $dominio = $this->normalizarDominio($dominio);
+
+        // Regras de canonicalizacao para Gmail/Googlemail.
+        if (in_array($dominio, ['gmail.com', 'googlemail.com'], true)) {
+            $local = explode('+', $local, 2)[0];
+            $local = str_replace('.', '', $local);
+            $dominio = 'gmail.com';
+        }
+
+        $local = trim($local);
+        if ($local === '') {
+            return null;
+        }
+
+        return "{$local}@{$dominio}";
+    }
+
+    private function normalizarNome(mixed $nome): ?string
+    {
+        if ($nome === null) {
+            return null;
+        }
+
+        $nome = trim(mb_strtolower((string) $nome));
+        if ($nome === '') {
+            return null;
+        }
+
+        $nome = iconv('UTF-8', 'ASCII//TRANSLIT', $nome) ?: $nome;
+        $nome = preg_replace('/[^a-z0-9\s]+/', ' ', $nome) ?? $nome;
+        $nome = preg_replace('/\s+/', ' ', $nome) ?? $nome;
+        $nome = trim($nome);
+
+        return $nome !== '' ? $nome : null;
+    }
+
+    private function normalizarDominio(string $dominio): string
+    {
+        $dominio = trim(mb_strtolower($dominio));
+
+        $mapaErrosComuns = [
+            'gmail.com.br' => 'gmail.com',
+            'gmial.com' => 'gmail.com',
+            'gmai.com' => 'gmail.com',
+            'gmal.com' => 'gmail.com',
+            'hotmial.com' => 'hotmail.com',
+            'outlok.com' => 'outlook.com',
+            'outllok.com' => 'outlook.com',
+            'yaho.com' => 'yahoo.com',
+        ];
+
+        if (isset($mapaErrosComuns[$dominio])) {
+            return $mapaErrosComuns[$dominio];
+        }
+
+        $dominiosConhecidos = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'icloud.com'];
+        foreach ($dominiosConhecidos as $dominioConhecido) {
+            if (levenshtein($dominio, $dominioConhecido) <= 2) {
+                return $dominioConhecido;
+            }
+        }
+
+        return $dominio;
+    }
+
+    private function splitEmail(string $email): array
+    {
+        if (!str_contains($email, '@')) {
+            return [null, null];
+        }
+
+        [$local, $dominio] = array_pad(explode('@', $email, 2), 2, null);
+        return [$local, $dominio];
+    }
+
+    private function similaridadeEmail(string $emailA, string $emailB): float
+    {
+        if ($emailA === $emailB) {
+            return 1.0;
+        }
+
+        [$localA, $dominioA] = $this->splitEmail($emailA);
+        [$localB, $dominioB] = $this->splitEmail($emailB);
+
+        $scoreCompleto = $this->similaridadeLevenshtein($emailA, $emailB);
+        $scoreLocal = $this->similaridadeLevenshtein((string) $localA, (string) $localB);
+        $scoreDominio = $this->similaridadeLevenshtein((string) $dominioA, (string) $dominioB);
+
+        // Dominio pesa mais por reduzir falso positivo entre provedores distintos.
+        $scorePonderado = ($scoreLocal * 0.4) + ($scoreDominio * 0.6);
+
+        return max($scoreCompleto, $scorePonderado);
+    }
+
+    private function similaridadeLevenshtein(string $a, string $b): float
+    {
+        if ($a === $b) {
+            return 1.0;
+        }
+
+        $maxLen = max(strlen($a), strlen($b));
+        if ($maxLen === 0) {
+            return 1.0;
+        }
+
+        $distancia = levenshtein($a, $b);
+        $score = 1 - ($distancia / $maxLen);
+
+        return max(0.0, min(1.0, $score));
     }
 }
