@@ -231,6 +231,8 @@
       align-items: center;
       justify-content: center;
       font-weight: 700;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .admin-avatar--image {
