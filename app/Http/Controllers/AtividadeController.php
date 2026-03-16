@@ -370,7 +370,7 @@ class AtividadeController extends Controller
 
         $pdf->AddPage();
 
-        $pdf->SetFont('Helvetica', '', 9);
+        $pdf->SetFont('Helvetica', '', 8);
 
         $contador = 1;
 
@@ -382,6 +382,9 @@ class AtividadeController extends Controller
 
                 //pega o nome do inscrito para preencher na tabela
                 $nome = utf8_decode(substr($user->name ?? '—', 0, 50));
+                while ($pdf->GetStringWidth($nome) > 79) {
+                    $nome = substr($nome, 0, -1);
+                }
 
                 //os campos vazios para prenchimento manual
                 $pdf->Cell(8, 8, $contador++, 1, 0, 'C'); //nº
@@ -426,7 +429,7 @@ class AtividadeController extends Controller
 
         $pdf->AddPage();
 
-        $pdf->SetFont('Helvetica', '', 9);
+        $pdf->SetFont('Helvetica', '', 8);
 
         $contador = 1;
 
@@ -437,6 +440,9 @@ class AtividadeController extends Controller
                 $user = $inscricao->participante->user;
 
                 $nome = utf8_decode(substr($user->name ?? '—', 0, 50));
+                while ($pdf->GetStringWidth($nome) > 89) {
+                    $nome = substr($nome, 0, -1);
+                }
 
                 //formatando o CPF
                 $cpfSujo = $inscricao->participante->cpf ?? '';
