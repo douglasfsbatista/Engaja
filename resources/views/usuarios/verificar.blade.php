@@ -51,6 +51,8 @@
       Já cadastrados no sistema: <strong>{{ $resumo['usuarios_existentes'] }}</strong>
       |
       Não cadastrados: <strong>{{ $resumo['usuarios_nao_cadastrados'] }}</strong>
+      |
+      Duplicados na planilha: <strong>{{ $resumo['usuarios_duplicados'] ?? 0 }}</strong>
     </div>
 
     <div class="d-flex align-items-center justify-content-between mb-3">
@@ -61,9 +63,21 @@
           exibindo {{ $rows->count() }} por página
         @endif
       </div>
-      <div class="d-flex gap-2">
-        <a href="{{ route('usuarios.verificar.exportar', ['format' => 'csv', 'session_key' => $sessionKey]) }}" class="btn btn-outline-primary btn-sm">Exportar CSV</a>
-        <a href="{{ route('usuarios.verificar.exportar', ['format' => 'xlsx', 'session_key' => $sessionKey]) }}" class="btn btn-primary btn-sm">Exportar XLSX</a>
+      <div class="d-flex gap-2 flex-wrap justify-content-end">
+        <form method="GET" action="{{ route('usuarios.verificar.exportar', ['format' => 'csv']) }}" class="d-flex gap-2 align-items-center">
+          <input type="hidden" name="session_key" value="{{ $sessionKey }}">
+          <select name="modelo" class="form-select form-select-sm" style="min-width: 210px;">
+            <option value="nao_cadastrados">Somente não cadastrados</option>
+            <option value="completo">Verificação completa</option>
+          </select>
+          <button type="submit" class="btn btn-primary btn-sm" style="min-width: 110px;">Exportar CSV</button>
+        </form>
+
+        <form method="GET" action="{{ route('usuarios.verificar.exportar', ['format' => 'xlsx']) }}" class="d-flex gap-2 align-items-center">
+          <input type="hidden" name="session_key" value="{{ $sessionKey }}">
+          <input type="hidden" name="modelo" value="nao_cadastrados" class="js-modelo-hidden-xlsx">
+          <button type="submit" class="btn btn-primary btn-sm" style="min-width: 110px;">Exportar XLSX</button>
+        </form>
       </div>
     </div>
 
@@ -109,4 +123,18 @@
     @endif
   @endif
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const csvSelect = document.querySelector('select[name="modelo"]');
+    const xlsxModelo = document.querySelector('.js-modelo-hidden-xlsx');
+    if (!csvSelect || !xlsxModelo) return;
+
+    const syncModelo = () => {
+      xlsxModelo.value = csvSelect.value;
+    };
+
+    csvSelect.addEventListener('change', syncModelo);
+    syncModelo();
+  });
+</script>
 @endsection
