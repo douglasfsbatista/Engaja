@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\ModeloCertificado;
 use App\Imports\ParticipantesPreviewImport;
 use App\Exports\UsuariosNaoCadastradosExport;
+use App\Exports\UsuariosVerificacaoCompletaExport;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -228,6 +229,7 @@ class UserManagementController extends Controller
                 'total_importacao'      => (int) ($payload['total_count'] ?? 0),
                 'usuarios_existentes'   => (int) ($payload['existing_count'] ?? 0),
                 'usuarios_nao_cadastrados' => (int) ($payload['new_count'] ?? 0),
+                'usuarios_duplicados'   => (int) ($payload['duplicate_count'] ?? 0),
                 'gerado_em'             => $payload['generated_at'] ?? null,
             ];
         }
@@ -255,8 +257,10 @@ class UserManagementController extends Controller
             $sessionKey = 'user_verification_' . Str::uuid();
             session([$sessionKey => [
                 'rows'          => $resumo['rows_nao_cadastrados']->values()->all(),
+                'rows_completos'=> $resumo['rows_verificacao_completa']->values()->all(),
                 'existing_count'=> $resumo['usuarios_existentes'],
                 'new_count'     => $resumo['usuarios_nao_cadastrados'],
+                'duplicate_count' => $resumo['usuarios_duplicados'],
                 'total_count'   => $resumo['total_importacao'],
                 'generated_at'  => now()->toDateTimeString(),
             ]]);
@@ -286,9 +290,21 @@ class UserManagementController extends Controller
                 ->withErrors(['arquivo' => 'Sessao de verificacao expirada. Envie o arquivo novamente.']);
         }
 
-        $rows = collect($payload['rows'] ?? [])->values();
-        $export = new UsuariosNaoCadastradosExport($rows);
-        $filename = 'usuarios-nao-cadastrados-' . now()->format('Ymd_His') . '.' . $format;
+        $modelo = (string) $request->query('modelo', 'nao_cadastrados');
+        if (!in_array($modelo, ['nao_cadastrados', 'completo'], true)) {
+            abort(404);
+        }
+
+        if ($modelo === 'completo') {
+            $rows = collect($payload['rows_completos'] ?? [])->values();
+            $export = new UsuariosVerificacaoCompletaExport($rows);
+            $filename = 'usuarios-verificacao-completa-' . now()->format('Ymd_His') . '.' . $format;
+        } else {
+            $rows = collect($payload['rows'] ?? [])->values();
+            $export = new UsuariosNaoCadastradosExport($rows);
+            $filename = 'usuarios-nao-cadastrados-' . now()->format('Ymd_His') . '.' . $format;
+        }
+
         $writerType = $format === 'csv'
             ? \Maatwebsite\Excel\Excel::CSV
             : \Maatwebsite\Excel\Excel::XLSX;
@@ -358,35 +374,32 @@ class UserManagementController extends Controller
 
         $emailsExistentesArray = $emailsExistentes->all();
 
-        $rowsNaoCadastradosUnicos = collect();
+        $rowsNaoCadastrados = collect();
+        $rowsVerificacaoCompleta = collect();
         $usuariosExistentes = 0;
-        $naoCadastradosKeys = [];
+        $usuariosDuplicados = 0;
 
-        
-        $nomesPlanilhaLookup = [];
-        $emailsPlanilhaLookup = [];
-        $cpfsPlanilhaLookup = [];
-        $emailsPlanilhaNormalizados = [];
+        $nomesPlanilhaProcessados = [];
+        $emailsPlanilhaProcessados = [];
+        $cpfsPlanilhaProcessados = [];
+        $emailsPlanilhaPorDominio = [];
+        $emailsPlanilhaArray = [];
 
         foreach ($rowsNormalizados as $item) {
             $nomeNormalizado = $item['nome_normalizado'];
             $emailNormalizado = $item['email_normalizado'];
             $cpfNormalizado = $item['cpf_normalizado'];
 
-            $matchPorNome = ($nomeNormalizado && isset($nomesExistentesLookup[$nomeNormalizado]))
-                || ($nomeNormalizado && isset($nomesPlanilhaLookup[$nomeNormalizado]));
-            $matchPorCpf = ($cpfNormalizado && isset($cpfsExistentesLookup[$cpfNormalizado]))
-                || ($cpfNormalizado && isset($cpfsPlanilhaLookup[$cpfNormalizado]));
-            $matchPorEmailExato = ($emailNormalizado && isset($emailsExistentesLookup[$emailNormalizado]))
-                || ($emailNormalizado && isset($emailsPlanilhaLookup[$emailNormalizado]));
-            $matchPorSimilaridade = false;
+            $matchDbPorNome = $nomeNormalizado && isset($nomesExistentesLookup[$nomeNormalizado]);
+            $matchDbPorCpf = $cpfNormalizado && isset($cpfsExistentesLookup[$cpfNormalizado]);
+            $matchDbPorEmailExato = $emailNormalizado && isset($emailsExistentesLookup[$emailNormalizado]);
+            $matchDbPorEmailSimilar = false;
 
-            if (!$matchPorNome && !$matchPorCpf && !$matchPorEmailExato && $emailNormalizado) {
+            if (!$matchDbPorNome && !$matchDbPorCpf && !$matchDbPorEmailExato && $emailNormalizado) {
                 [, $dominio] = $this->splitEmail($emailNormalizado);
                 $candidatos = ($dominio && isset($emailsPorDominio[$dominio]))
                     ? $emailsPorDominio[$dominio]
                     : $emailsExistentesArray;
-                $candidatos = array_merge($candidatos, $emailsPlanilhaNormalizados);
 
                 $melhorScore = 0.0;
                 foreach ($candidatos as $emailExistente) {
@@ -399,55 +412,75 @@ class UserManagementController extends Controller
                     }
                 }
 
-                $matchPorSimilaridade = $melhorScore >= self::EMAIL_SIMILARITY_THRESHOLD;
+                $matchDbPorEmailSimilar = $melhorScore >= self::EMAIL_SIMILARITY_THRESHOLD;
             }
 
-            $isExistente = $matchPorNome || $matchPorCpf || $matchPorEmailExato || $matchPorSimilaridade;
+            $duplicadoNaPlanilha = false;
+            if (
+                ($nomeNormalizado && isset($nomesPlanilhaProcessados[$nomeNormalizado])) ||
+                ($cpfNormalizado && isset($cpfsPlanilhaProcessados[$cpfNormalizado])) ||
+                ($emailNormalizado && isset($emailsPlanilhaProcessados[$emailNormalizado]))
+            ) {
+                $duplicadoNaPlanilha = true;
+            } elseif ($emailNormalizado) {
+                [, $dominioPlanilha] = $this->splitEmail($emailNormalizado);
+                $candidatosPlanilha = ($dominioPlanilha && isset($emailsPlanilhaPorDominio[$dominioPlanilha]))
+                    ? $emailsPlanilhaPorDominio[$dominioPlanilha]
+                    : $emailsPlanilhaArray;
 
-            if ($isExistente) {
+                $melhorScorePlanilha = 0.0;
+                foreach ($candidatosPlanilha as $emailProcessado) {
+                    $score = $this->similaridadeEmail($emailNormalizado, $emailProcessado);
+                    if ($score > $melhorScorePlanilha) {
+                        $melhorScorePlanilha = $score;
+                    }
+                    if ($melhorScorePlanilha >= self::EMAIL_SIMILARITY_THRESHOLD) {
+                        break;
+                    }
+                }
+                $duplicadoNaPlanilha = $melhorScorePlanilha >= self::EMAIL_SIMILARITY_THRESHOLD;
+            }
+
+            $jaExisteNoBd = $matchDbPorNome || $matchDbPorCpf || $matchDbPorEmailExato || $matchDbPorEmailSimilar;
+            $rowCompleta = $item['row'];
+            $rowCompleta['ja_existe'] = $jaExisteNoBd ? 'Sim' : 'Nao';
+            $rowCompleta['duplicado_planilha'] = $duplicadoNaPlanilha ? 'Sim' : 'Nao';
+            $rowsVerificacaoCompleta->push($rowCompleta);
+
+            if ($duplicadoNaPlanilha) {
+                $usuariosDuplicados++;
+            } elseif ($jaExisteNoBd) {
                 $usuariosExistentes++;
-                if ($nomeNormalizado) {
-                    $nomesPlanilhaLookup[$nomeNormalizado] = true;
-                }
-                if ($cpfNormalizado) {
-                    $cpfsPlanilhaLookup[$cpfNormalizado] = true;
-                }
-                if ($emailNormalizado) {
-                    $emailsPlanilhaLookup[$emailNormalizado] = true;
-                    $emailsPlanilhaNormalizados[] = $emailNormalizado;
-                }
-                continue;
-            }
-
-            $chaveNaoCadastrado = $cpfNormalizado
-                ? "cpf:{$cpfNormalizado}"
-                : ($emailNormalizado ? "email:{$emailNormalizado}" : ($nomeNormalizado ? "nome:{$nomeNormalizado}" : md5(json_encode($item['row']))));
-
-            if (!isset($naoCadastradosKeys[$chaveNaoCadastrado])) {
-                $naoCadastradosKeys[$chaveNaoCadastrado] = true;
-                $rowsNaoCadastradosUnicos->push($item['row']);
             } else {
-                // Duplicado interno de um nao-cadastrado ja listado.
-                $usuariosExistentes++;
+                $rowsNaoCadastrados->push($item['row']);
             }
 
             if ($nomeNormalizado) {
-                $nomesPlanilhaLookup[$nomeNormalizado] = true;
+                $nomesPlanilhaProcessados[$nomeNormalizado] = true;
             }
             if ($cpfNormalizado) {
-                $cpfsPlanilhaLookup[$cpfNormalizado] = true;
+                $cpfsPlanilhaProcessados[$cpfNormalizado] = true;
             }
             if ($emailNormalizado) {
-                $emailsPlanilhaLookup[$emailNormalizado] = true;
-                $emailsPlanilhaNormalizados[] = $emailNormalizado;
+                $emailsPlanilhaProcessados[$emailNormalizado] = true;
+                $emailsPlanilhaArray[] = $emailNormalizado;
+                [, $dominioEmail] = $this->splitEmail($emailNormalizado);
+                if ($dominioEmail) {
+                    if (!array_key_exists($dominioEmail, $emailsPlanilhaPorDominio)) {
+                        $emailsPlanilhaPorDominio[$dominioEmail] = [];
+                    }
+                    $emailsPlanilhaPorDominio[$dominioEmail][] = $emailNormalizado;
+                }
             }
         }
 
         return [
             'total_importacao' => $rowsNormalizados->count(),
             'usuarios_existentes' => $usuariosExistentes,
-            'usuarios_nao_cadastrados' => $rowsNaoCadastradosUnicos->count(),
-            'rows_nao_cadastrados' => $rowsNaoCadastradosUnicos->values(),
+            'usuarios_nao_cadastrados' => $rowsNaoCadastrados->count(),
+            'usuarios_duplicados' => $usuariosDuplicados,
+            'rows_nao_cadastrados' => $rowsNaoCadastrados->values(),
+            'rows_verificacao_completa' => $rowsVerificacaoCompleta->values(),
         ];
     }
 
