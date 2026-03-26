@@ -69,7 +69,7 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
         ->name('atividades.lista-autorizacao.pdf');
 });
 
-Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica'])->group(function () {
+Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
     Route::get('/eventos/{evento}/inscricoes/import', [InscricaoController::class, 'import'])->name('inscricoes.import');
     Route::post('/eventos/{evento}/inscricoes/import', [InscricaoController::class, 'cadastro'])->name('inscricoes.cadastro');
     Route::get('/eventos/{evento}/inscricoes/preview', [InscricaoController::class, 'preview'])->name('inscricoes.preview');
