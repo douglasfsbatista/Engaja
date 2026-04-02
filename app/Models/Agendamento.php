@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Agendamento extends Model
+{
+    use SoftDeletes;
+
+    protected $fillable = [
+        'atividade_acao_id',
+        'turma',
+        'municipio_id',
+        'user_id',
+        'data_horario',
+        'publico_participante',
+        'local_acao',
+    ];
+
+    protected $casts = [
+        'data_horario' => 'datetime',
+    ];
+
+    public function atividadeAcao(): BelongsTo
+    {
+        return $this->belongsTo(AtividadeAcao::class);
+    }
+
+    public function municipio(): BelongsTo
+    {
+        return $this->belongsTo(Municipio::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+}

@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\AvaliacaoController;
+use App\Http\Controllers\AgendamentoController;
 use App\Http\Controllers\AtividadeController;
+use App\Http\Controllers\AtividadeAcaoController;
 use App\Http\Controllers\DimensaoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EscalaController;
@@ -101,6 +103,9 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
     Route::get('avaliacoes/{avaliacao}/respostas', [AvaliacaoController::class, 'respostas'])->name('avaliacoes.respostas');
     Route::get('avaliacoes/{avaliacao}/respostas/{submissao}', [AvaliacaoController::class, 'respostasMostrar'])->name('avaliacoes.respostas.mostrar');
     Route::get('atividades/{atividade}/avaliacoes', [AvaliacaoController::class, 'resultadosAtividade'])->name('atividades.avaliacoes');
+    Route::resource('agendamentos', AgendamentoController::class);
+    Route::resource('atividade-acoes', AtividadeAcaoController::class)
+        ->parameters(['atividade-acoes' => 'atividadeAcao']);
 });
 
 Route::middleware(['auth', 'role:administrador|gerente'])

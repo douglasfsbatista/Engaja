@@ -45,6 +45,28 @@
 
   @hasanyrole('administrador|gerente|eq_pedagogica|articulador')
     <div class="admin-sidebar__section">
+      <p class="admin-sidebar__label">Agendamentos</p>
+      <a class="admin-nav-link {{ request()->routeIs('agendamentos.*') ? 'active' : '' }}" href="{{ route('agendamentos.index') }}">
+        <span class="admin-nav-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h.5A1.5 1.5 0 0 1 15 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 13.5v-11A1.5 1.5 0 0 1 2.5 1H3V.5a.5.5 0 0 1 .5-.5M2 5v8.5a.5.5 0 0 0 .5.5h11a.5.5 0 0 0 .5-.5V5z"/>
+          </svg>
+        </span>
+        <span class="admin-nav-text">Agendamentos</span>
+      </a>
+      <a class="admin-nav-link {{ request()->routeIs('atividade-acoes.*') ? 'active' : '' }}" href="{{ route('atividade-acoes.index') }}">
+        <span class="admin-nav-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8.5 2a.5.5 0 0 0-1 0v1h-5A1.5 1.5 0 0 0 1 4.5v9A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 13.5 3h-5zM2 6h12v7.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5z"/>
+          </svg>
+        </span>
+        <span class="admin-nav-text">Atividade/Ação</span>
+      </a>
+    </div>
+  @endhasanyrole
+
+  @hasanyrole('administrador|gerente|eq_pedagogica|articulador')
+    <div class="admin-sidebar__section">
       <p class="admin-sidebar__label">Avaliações</p>
       <a class="admin-nav-link {{ request()->routeIs('dimensaos.*') ? 'active' : '' }}" href="{{ route('dimensaos.index') }}">
         <span class="admin-nav-icon" aria-hidden="true">
