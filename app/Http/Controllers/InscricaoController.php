@@ -51,20 +51,6 @@ class InscricaoController extends Controller
         $sheet->setCellValue('A1', 'momento');
         $sheet->setCellValue('B1', 'carga_horaria');
 
-        $rows = [
-            ['Abertura', 1],
-            ['Painel 1 - Educacao Integral', 2],
-            ['Oficina Pratica', 3],
-            ['Encerramento', 1],
-        ];
-
-        $line = 2;
-        foreach ($rows as [$momento, $carga]) {
-            $sheet->setCellValue("A{$line}", $momento);
-            $sheet->setCellValue("B{$line}", $carga);
-            $line++;
-        }
-
         $sheet->getStyle('A1:B1')->getFont()->setBold(true);
         $sheet->getColumnDimension('A')->setAutoSize(true);
         $sheet->getColumnDimension('B')->setWidth(18);
