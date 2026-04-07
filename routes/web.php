@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AvaliacaoController;
 use App\Http\Controllers\AgendamentoController;
+use App\Http\Controllers\AgendamentoParticipanteController;
 use App\Http\Controllers\AtividadeController;
 use App\Http\Controllers\AtividadeAcaoController;
 use App\Http\Controllers\DimensaoController;
@@ -104,6 +105,21 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
     Route::get('avaliacoes/{avaliacao}/respostas/{submissao}', [AvaliacaoController::class, 'respostasMostrar'])->name('avaliacoes.respostas.mostrar');
     Route::get('atividades/{atividade}/avaliacoes', [AvaliacaoController::class, 'resultadosAtividade'])->name('atividades.avaliacoes');
     Route::resource('agendamentos', AgendamentoController::class);
+    Route::prefix('agendamentos/{agendamento}/participantes')
+        ->name('agendamentos.participantes.')
+        ->group(function () {
+            Route::get('/', [AgendamentoParticipanteController::class, 'index'])->name('index');
+            Route::get('/create', [AgendamentoParticipanteController::class, 'create'])->name('create');
+            Route::post('/', [AgendamentoParticipanteController::class, 'store'])->name('store');
+            Route::get('/{participante}/edit', [AgendamentoParticipanteController::class, 'edit'])->name('edit');
+            Route::put('/{participante}', [AgendamentoParticipanteController::class, 'update'])->name('update');
+            Route::delete('/{participante}', [AgendamentoParticipanteController::class, 'destroy'])->name('destroy');
+
+            Route::get('/importar', [AgendamentoParticipanteController::class, 'import'])->name('import');
+            Route::post('/importar', [AgendamentoParticipanteController::class, 'upload'])->name('upload');
+            Route::get('/importar/preview', [AgendamentoParticipanteController::class, 'preview'])->name('import.preview');
+            Route::post('/importar/confirmar', [AgendamentoParticipanteController::class, 'confirm'])->name('import.confirm');
+        });
     Route::resource('atividade-acoes', AtividadeAcaoController::class)
         ->parameters(['atividade-acoes' => 'atividadeAcao']);
 });
