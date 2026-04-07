@@ -603,6 +603,9 @@
     const form = document.getElementById('descricao')?.closest('form');
     if (!form) return;
 
+    const toggleAllMunicipios = document.getElementById('municipios_toggle_all');
+    const municipioCheckboxes = Array.from(form.querySelectorAll('input[name="municipios[]"]'));
+
     // Remove a marcação anterior antes de aplicar o asterisco nos campos required.
     form.querySelectorAll('label[data-required="true"]').forEach(function (label) {
       label.removeAttribute('data-required');
@@ -616,8 +619,34 @@
         label.dataset.required = 'true';
       }
     });
+
+    if (!toggleAllMunicipios || municipioCheckboxes.length === 0) {
+      return;
+    }
+
+    const syncToggleAllMunicipios = function () {
+      const checkedCount = municipioCheckboxes.filter(function (checkbox) {
+        return checkbox.checked;
+      }).length;
+
+      toggleAllMunicipios.checked = checkedCount === municipioCheckboxes.length;
+      toggleAllMunicipios.indeterminate = checkedCount > 0 && checkedCount < municipioCheckboxes.length;
+    };
+
+    toggleAllMunicipios.addEventListener('change', function () {
+      municipioCheckboxes.forEach(function (checkbox) {
+        checkbox.checked = toggleAllMunicipios.checked;
+      });
+      toggleAllMunicipios.indeterminate = false;
+    });
+
+    municipioCheckboxes.forEach(function (checkbox) {
+      checkbox.addEventListener('change', syncToggleAllMunicipios);
+    });
+
+    syncToggleAllMunicipios();
   });
- </script>
+</script>
 
 <div class="row g-3">
   <div class="col-md-4">
@@ -635,7 +664,7 @@
            class="form-control @error('hora_inicio') is-invalid @enderror" required>
     @error('hora_inicio') <div class="invalid-feedback">{{ $message }}</div> @enderror
   </div>
-  
+
   <div class="col-md-4">
     <label for="hora_fim" class="form-label">Hora de término</label>
     <input type="time" name="hora_fim" id="hora_fim"
