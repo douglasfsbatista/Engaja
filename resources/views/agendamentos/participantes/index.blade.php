@@ -9,10 +9,12 @@
         {{ optional($agendamento->data_horario)->format('d/m/Y H:i') }} · {{ $agendamento->atividadeAcao?->nome ?? 'Atividade/Ação' }}
       </div>
     </div>
-    <div class="d-flex gap-2">
-      <a href="{{ route('agendamentos.participantes.import', $agendamento) }}" class="btn btn-outline-primary">Importar XLSX</a>
-      <a href="{{ route('agendamentos.participantes.create', $agendamento) }}" class="btn btn-engaja">Novo participante</a>
-    </div>
+    @unless($agendamento->efetivado)
+      <div class="d-flex gap-2">
+        <a href="{{ route('agendamentos.participantes.import', $agendamento) }}" class="btn btn-outline-primary">Importar XLSX</a>
+        <a href="{{ route('agendamentos.participantes.create', $agendamento) }}" class="btn btn-engaja">Novo participante</a>
+      </div>
+    @endunless
   </div>
 
   <form method="GET" action="{{ route('agendamentos.participantes.index', $agendamento) }}" class="row g-2 align-items-end mb-3">
@@ -63,12 +65,14 @@
             <td>{{ $participante->turma ?: '—' }}</td>
             <td>{{ $participante->origem }}</td>
             <td class="text-end">
-              <a href="{{ route('agendamentos.participantes.edit', [$agendamento, $participante]) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
-              <form method="POST" action="{{ route('agendamentos.participantes.destroy', [$agendamento, $participante]) }}" class="d-inline">
-                @csrf
-                @method('DELETE')
-                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Tem certeza que deseja excluir este participante?')">Excluir</button>
-              </form>
+              @unless($agendamento->efetivado)
+                <a href="{{ route('agendamentos.participantes.edit', [$agendamento, $participante]) }}" class="btn btn-sm btn-outline-secondary">Editar</a>
+                <form method="POST" action="{{ route('agendamentos.participantes.destroy', [$agendamento, $participante]) }}" class="d-inline">
+                  @csrf
+                  @method('DELETE')
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Tem certeza que deseja excluir este participante?')">Excluir</button>
+                </form>
+              @endunless
             </td>
           </tr>
         @empty

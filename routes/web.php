@@ -106,6 +106,7 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
     Route::get('avaliacoes/{avaliacao}/respostas/{submissao}', [AvaliacaoController::class, 'respostasMostrar'])->name('avaliacoes.respostas.mostrar');
     Route::get('atividades/{atividade}/avaliacoes', [AvaliacaoController::class, 'resultadosAtividade'])->name('atividades.avaliacoes');
     Route::get('agendamentos/efetivacoes', [AgendamentoEfetivacaoController::class, 'index'])->name('agendamentos.efetivacoes.index');
+    Route::get('agendamentos/efetivados', [AgendamentoEfetivacaoController::class, 'efetivados'])->name('agendamentos.efetivados.index');
     Route::get('agendamentos/{agendamento}/efetivar', [AgendamentoEfetivacaoController::class, 'create'])->name('agendamentos.efetivacoes.create');
     Route::post('agendamentos/{agendamento}/efetivar/confirmar', [AgendamentoEfetivacaoController::class, 'confirm'])->name('agendamentos.efetivacoes.confirm');
     Route::post('agendamentos/{agendamento}/efetivar', [AgendamentoEfetivacaoController::class, 'store'])->name('agendamentos.efetivacoes.store');

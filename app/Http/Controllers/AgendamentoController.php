@@ -15,6 +15,7 @@ class AgendamentoController extends Controller
         $agendamentos = Agendamento::query()
             ->with(['atividadeAcao', 'municipio.estado', 'user', 'atividade.evento'])
             ->withCount('participantesClonados')
+            ->where('user_id', auth()->id())
             ->orderBy('data_horario')
             ->paginate(15);
 
