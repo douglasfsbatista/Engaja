@@ -61,7 +61,9 @@ class AtividadeController extends Controller
 
         $atividadesCopiaveis = $this->listarAtividadesCopiaveis();
 
-        return view('atividades.create', compact('evento', 'municipios', 'atividadesCopiaveis', 'marcadosPlanejamento'));
+        $municipiosJson = $this->municipiosParaSelecaoJson($municipios);
+
+        return view('atividades.create', compact('evento', 'municipios', 'municipiosJson', 'atividadesCopiaveis', 'marcadosPlanejamento'));
     }
 
     public function saveChecklist(Request $request, Atividade $atividade)
@@ -144,7 +146,9 @@ class AtividadeController extends Controller
 
         $atividadesCopiaveis = $this->listarAtividadesCopiaveis($atividade);
 
-        return view('atividades.edit', compact('evento', 'atividade', 'municipios', 'atividadesCopiaveis'));
+        $municipiosJson = $this->municipiosParaSelecaoJson($municipios);
+
+        return view('atividades.edit', compact('evento', 'atividade', 'municipios', 'municipiosJson', 'atividadesCopiaveis'));
     }
 
     public function update(Request $request, Atividade $atividade)
@@ -195,6 +199,29 @@ class AtividadeController extends Controller
         $atividade->delete();
 
         return back()->with('success', 'Momento removida.');
+    }
+
+    /**
+     * Dados dos municípios para o seletor: apenas o nome no município; UF e região por associação.
+     *
+     * @param  \Illuminate\Support\Collection<int, Municipio>  $municipios
+     * @return array<int, array{id: string, nome: string, estado: array{sigla: string, nome: string}, regiao: array{nome: string}}>
+     */
+    private function municipiosParaSelecaoJson($municipios): array
+    {
+        return $municipios->map(function (Municipio $m) {
+            return [
+                'id'     => (string) $m->id,
+                'nome'   => $m->nome,
+                'estado' => [
+                    'sigla' => $m->estado->sigla ?? '',
+                    'nome'  => $m->estado->nome ?? '',
+                ],
+                'regiao' => [
+                    'nome' => $m->estado->regiao->nome ?? '',
+                ],
+            ];
+        })->values()->all();
     }
 
     private function normalizarChecklistIndices(array $itens): array
