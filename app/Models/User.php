@@ -70,6 +70,11 @@ class User extends Authenticatable
         return $this->hasMany(Evento::class);
     }
 
+    public function agendamentos()
+    {
+        return $this->hasMany(Agendamento::class);
+    }
+
     public function getProfilePhotoUrlAttribute(): ?string
     {
         if (! $this->profile_photo_path) {
