@@ -42,11 +42,15 @@ class AgendamentoParticipanteController extends Controller
 
     public function create(Agendamento $agendamento)
     {
+        $this->garantirAgendamentoNaoEfetivado($agendamento);
+
         return view('agendamentos.participantes.create', compact('agendamento'));
     }
 
     public function store(Request $request, Agendamento $agendamento)
     {
+        $this->garantirAgendamentoNaoEfetivado($agendamento);
+
         $dados = $this->validarParticipante($request, $agendamento);
         $dados['origem'] = 'manual';
         $dados['turma'] = $agendamento->turma;
@@ -60,6 +64,7 @@ class AgendamentoParticipanteController extends Controller
 
     public function edit(Agendamento $agendamento, AgendamentoParticipante $participante)
     {
+        $this->garantirAgendamentoNaoEfetivado($agendamento);
         $this->garantirParticipanteDoAgendamento($agendamento, $participante);
 
         return view('agendamentos.participantes.edit', compact('agendamento', 'participante'));
@@ -67,6 +72,7 @@ class AgendamentoParticipanteController extends Controller
 
     public function update(Request $request, Agendamento $agendamento, AgendamentoParticipante $participante)
     {
+        $this->garantirAgendamentoNaoEfetivado($agendamento);
         $this->garantirParticipanteDoAgendamento($agendamento, $participante);
 
         $dados = $this->validarParticipante($request, $agendamento, $participante);
@@ -80,6 +86,7 @@ class AgendamentoParticipanteController extends Controller
 
     public function destroy(Agendamento $agendamento, AgendamentoParticipante $participante)
     {
+        $this->garantirAgendamentoNaoEfetivado($agendamento);
         $this->garantirParticipanteDoAgendamento($agendamento, $participante);
 
         $participante->delete();
@@ -91,11 +98,15 @@ class AgendamentoParticipanteController extends Controller
 
     public function import(Agendamento $agendamento)
     {
+        $this->garantirAgendamentoNaoEfetivado($agendamento);
+
         return view('agendamentos.participantes.import', compact('agendamento'));
     }
 
     public function upload(Request $request, Agendamento $agendamento)
     {
+        $this->garantirAgendamentoNaoEfetivado($agendamento);
+
         $dados = $request->validate([
             'arquivo' => 'required|file|mimes:xlsx|max:10240',
             'observacoes' => 'nullable|string|max:2000',
@@ -173,6 +184,8 @@ class AgendamentoParticipanteController extends Controller
 
     public function preview(Request $request, Agendamento $agendamento)
     {
+        $this->garantirAgendamentoNaoEfetivado($agendamento);
+
         $sessionKey = (string) $request->query('session_key', '');
         $payload = session($sessionKey);
 
@@ -215,6 +228,8 @@ class AgendamentoParticipanteController extends Controller
 
     public function confirm(Request $request, Agendamento $agendamento)
     {
+        $this->garantirAgendamentoNaoEfetivado($agendamento);
+
         $dados = $request->validate([
             'session_key' => 'required|string',
         ]);
@@ -340,6 +355,11 @@ class AgendamentoParticipanteController extends Controller
         }
 
         return $dados;
+    }
+
+    private function garantirAgendamentoNaoEfetivado(Agendamento $agendamento): void
+    {
+        abort_if($agendamento->efetivado, 403, 'Agendamentos efetivados não permitem alteração de participantes.');
     }
 
     private function normalizarCabecalho(string $header): string

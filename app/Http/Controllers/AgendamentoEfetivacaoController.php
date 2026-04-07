@@ -29,6 +29,19 @@ class AgendamentoEfetivacaoController extends Controller
         return view('agendamentos.efetivacoes.index', compact('agendamentos'));
     }
 
+    public function efetivados()
+    {
+        $agendamentos = Agendamento::query()
+            ->with(['atividadeAcao', 'municipio.estado', 'user', 'atividade.evento'])
+            ->withCount('participantesClonados')
+            ->where('efetivado', true)
+            ->orderByDesc('efetivado_em')
+            ->orderByDesc('data_horario')
+            ->paginate(15);
+
+        return view('agendamentos.efetivacoes.efetivados', compact('agendamentos'));
+    }
+
     public function create(Agendamento $agendamento)
     {
         $agendamento->load(['atividadeAcao', 'municipio.estado', 'user', 'atividade.evento'])
