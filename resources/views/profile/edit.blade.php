@@ -224,6 +224,23 @@
                                 </select>
                                 @error('municipio_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
+
+                            <div class="mb-4">
+                                <div class="form-check d-flex align-items-center gap-2">
+                                    <input type="hidden" name="autorizacao_imagem" value="0">
+                                    <input type="checkbox" class="form-check-input mt-0" id="autorizacao_imagem" name="autorizacao_imagem" value="1" {{ old('autorizacao_imagem', $user->participante->autorizacao_imagem ?? false) ? 'checked' : '' }} style="cursor: pointer;">
+
+                                    <label class="form-check-label mb-0" for="autorizacao_imagem" style="cursor: pointer;">
+                                        Autorização de uso de imagem
+                                    </label>
+
+                                    <button type="button" class="btn btn-link p-0 text-engaja border-0 bg-transparent" data-bs-toggle="modal" data-bs-target="#modalTermosImagem" aria-label="Ler termos de uso de imagem" title="Ler termos de uso de imagem">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-question-circle-fill" viewBox="0 0 16 16" style="color: #421944;">
+                                            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM5.496 6.033h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286a.237.237 0 0 0 .241.247zm2.325 6.443c.61 0 1.029-.394 1.029-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94 0 .533.425.927 1.009.927z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -504,7 +521,35 @@
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
+{{-- Modal para autorização de imagem --}}
+<div class="modal fade" id="modalTermosImagem" tabindex="-1" aria-labelledby="modalTermosImagemLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title text-engaja fw-bold" id="modalTermosImagemLabel">Autorização de Imagem</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body text-muted" style="font-size: 0.95rem;">
+                <p>Ao marcar este campo você confirma e possui a ciência da destinação do uso do conteúdo descrito abaixo:</p>
+                <ol type="a" class="ps-3 mb-3" style="line-height: 1.2;">
+                    <li class="mb-2">Utilizar e veicular as fotografias ou vídeos realizados com o registro da imagem para fins de publicidade institucional, sem qualquer limitação de número de inserções e reproduções;</li>
+                    <li class="mb-2">Utilizar e veicular as fotografias ou vídeos captados acima em todos os canais de comunicação do projeto e parcerias, como redes sociais e outros;</li>
+                    <li class="mb-2">Utilizar as fotografias ou vídeos na produção de quaisquer materiais publicitários para fins de divulgação do projeto em canais de comunicação e divulgação;</li>
+                    <li>Utilizar as fotografias ou cortes de vídeos na criação de conteúdo para a produção de materiais publicitários institucionais e afins.</li>
+                </ol>
+                <p class="mb-0"> Autorizo, de forma expressa o uso e a reprodução da minha imagem, nome e voz sem qualquer ônus, no Brasil ou no
+                   exterior, em favor do Projeto ALFA-EJA Brasil, realizado pelo Instituto de Educação e Direitos Humanos Paulo Freire,
+                   com sede na Rua Vespasiano, nº 344, sala F 022 – Vila Romana, São Paulo, SP, CEP 05044-050, com o CNPJ
+                   04.950.603/0001-05.
+                </p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-engaja" data-bs-dismiss="modal">Estou ciente!</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -566,6 +611,23 @@
         const input = wrap.querySelector('input');
         if (input) input.required = mostrar;
     }
+
+    function initModalAutorizacaoImagem() {
+        const checkboxImagem = document.getElementById('autorizacao_imagem');
+        const modalTermos = document.getElementById('modalTermosImagem');
+
+        if (checkboxImagem && modalTermos) {
+            checkboxImagem.addEventListener('change', function () {
+                if (this.checked) {
+                    const modalInstance = new bootstrap.Modal(modalTermos);
+                    modalInstance.show();
+                }
+            });
+        }
+    }
+    document.addEventListener('DOMContentLoaded', initModalAutorizacaoImagem);
+
+
 </script>
 
 @endsection

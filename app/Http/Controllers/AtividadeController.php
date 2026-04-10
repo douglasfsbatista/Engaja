@@ -24,8 +24,8 @@ class AtividadeController extends Controller
                 'municipios.estado',
                 'avaliacaoAtividades' => fn($rel) => $rel->when($userId, fn($query) => $query->where('user_id', $userId)),
             ])
-            ->orderBy('dia')
-            ->orderBy('hora_inicio')
+            ->orderByDesc('dia')
+            ->orderByDesc('hora_inicio')
             ->paginate(12);
         return view('atividades.index', compact('evento', 'atividades'));
     }

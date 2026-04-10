@@ -1,12 +1,13 @@
 <?php
 
+use App\Http\Controllers\AutorizacaoImagemImportController;
+use App\Http\Controllers\AvaliacaoController;
 use App\Http\Controllers\AgendamentoController;
 use App\Http\Controllers\AgendamentoEfetivacaoController;
 use App\Http\Controllers\AgendamentoParticipanteController;
 use App\Http\Controllers\AtividadeAcaoController;
 use App\Http\Controllers\AtividadeController;
 use App\Http\Controllers\AvaliacaoAtividadeController;
-use App\Http\Controllers\AvaliacaoController;
 use App\Http\Controllers\CertificadoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DimensaoController;
@@ -177,6 +178,10 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
         Route::put('{managedUser}', [UserManagementController::class, 'update'])->name('update');
         Route::post('certificados/emitir', [CertificadoController::class, 'emitirPorParticipantes'])->name('certificados.emitir');
         Route::get('exportar', [UserManagementController::class, 'export'])->name('export');
+        Route::get('autorizacoes-imagem/importar', [AutorizacaoImagemImportController::class, 'import'])->name('autorizacoes.import');
+        Route::post('autorizacoes-imagem/importar', [\App\Http\Controllers\AutorizacaoImagemImportController::class, 'upload'])->name('autorizacoes.upload');
+        Route::get('autorizacoes-imagem/preview', [AutorizacaoImagemImportController::class, 'preview'])->name('autorizacoes.preview');
+        Route::post('autorizacoes-imagem/confirmar', [AutorizacaoImagemImportController::class, 'confirmar'])->name('autorizacoes.confirmar');
     });
 
 Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
@@ -206,6 +211,9 @@ Route::middleware(['auth', 'role:administrador|gerente'])->group(function () {
 
     Route::get('/relatorios-avaliacao/{relatorio}', [AvaliacaoAtividadeController::class, 'show'])
         ->name('avaliacao-atividade.show');
+
+    Route::get('/atividades/{atividade}/relatorios-avaliacao/pdf-consolidado', [AvaliacaoAtividadeController::class, 'baixarTodosPorAtividade'])
+        ->name('avaliacao-atividade.download-all');
 });
 
 Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
