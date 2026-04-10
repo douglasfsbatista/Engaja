@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AutorizacaoImagemImportController;
 use App\Http\Controllers\AvaliacaoController;
 use App\Http\Controllers\AgendamentoController;
 use App\Http\Controllers\AgendamentoEfetivacaoController;
@@ -173,6 +174,10 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
         Route::put('{managedUser}', [UserManagementController::class, 'update'])->name('update');
         Route::post('certificados/emitir', [CertificadoController::class, 'emitirPorParticipantes'])->name('certificados.emitir');
         Route::get('exportar', [UserManagementController::class, 'export'])->name('export');
+        Route::get('autorizacoes-imagem/importar', [AutorizacaoImagemImportController::class, 'import'])->name('autorizacoes.import');
+        Route::post('autorizacoes-imagem/importar', [\App\Http\Controllers\AutorizacaoImagemImportController::class, 'upload'])->name('autorizacoes.upload');
+        Route::get('autorizacoes-imagem/preview', [AutorizacaoImagemImportController::class, 'preview'])->name('autorizacoes.preview');
+        Route::post('autorizacoes-imagem/confirmar', [AutorizacaoImagemImportController::class, 'confirmar'])->name('autorizacoes.confirmar');
     });
 
 Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {

@@ -28,7 +28,7 @@ class UserManagementController extends Controller
 {
     private const PROTECTED_ROLES = ['administrador'];
     private const LEGACY_ROLES = ['gestor', 'formador'];
-    private const CREATOR_ROLES = ['administrador', 'gerente', 'articulador', 'SME'];
+    private const CREATOR_ROLES = ['administrador', 'gerente', 'eq_pedagogica', 'articulador'];
     private const EMAIL_SIMILARITY_THRESHOLD = 0.85;
 
     public function index(Request $request): View
@@ -134,6 +134,7 @@ class UserManagementController extends Controller
                     'escola_unidade'   => $data['escola_unidade'] ?? null,
                     'tipo_organizacao' => $data['tipo_organizacao'] ?? null,
                     'tag'              => $data['tag'] ?? null,
+                    'autorizacao_imagem' => $data['autorizacao_imagem'] ?? false,
                 ]
             );
 
@@ -223,6 +224,7 @@ class UserManagementController extends Controller
                 'escola_unidade'   => $data['escola_unidade']   ?? null,
                 'tipo_organizacao' => $data['tipo_organizacao'] ?? null,
                 'tag'              => $data['tag']              ?? null,
+                'autorizacao_imagem' => $data['autorizacao_imagem'] ?? false,
             ]
         );
 
@@ -256,9 +258,16 @@ class UserManagementController extends Controller
         return $user->hasAnyRole(self::PROTECTED_ROLES);
     }
 
-    public function export()
+    public function export(Request $request)
     {
-        return Excel::download(new UsersExport, 'usuarios.xlsx');
+        $regiaoId = $request->query('regiao');
+        $estadoId = $request->query('estado');
+        $municipioId = $request->query('municipio');
+
+        return Excel::download(
+            new UsersExport($regiaoId, $estadoId, $municipioId),
+            'usuarios.xlsx'
+        );
     }
 
     public function verificarIndex(Request $request): View|RedirectResponse
