@@ -277,16 +277,6 @@
     </div>
   </div>
 
-  {{-- Descrição / Objetivo --}}
-  @if($evento->objetivos_especificos)
-  <div class="mb-4">
-    <h2 class="h5 fw-bold mb-2">Objetivos Específicos</h2>
-    <div class="ev-card p-3">
-      <p class="mb-0">{{ $evento->objetivos_especificos }}</p>
-    </div>
-  </div>
-  @endif
-
   @if($evento->objetivos_gerais)
   <div class="mb-4">
     <h2 class="h5 fw-bold mb-2">Objetivos Gerais</h2>
@@ -294,6 +284,16 @@
       <p class="mb-0">{{ $evento->objetivos_gerais }}</p>
     </div>
   </div>
+  @endif
+
+    {{-- Descrição / Objetivo --}}
+  @if($evento->objetivos_especificos)
+      <div class="mb-4">
+          <h2 class="h5 fw-bold mb-2">Objetivos Específicos</h2>
+          <div class="ev-card p-3">
+              <p class="mb-0">{{ $evento->objetivos_especificos }}</p>
+          </div>
+      </div>
   @endif
 
   {{-- Programação --}}
