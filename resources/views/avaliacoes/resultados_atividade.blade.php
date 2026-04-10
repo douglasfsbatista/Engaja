@@ -3,14 +3,13 @@
 @section('content')
 <div class="container py-4">
 
-    {{-- Cabeçalho --}}
     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
         <div>
-            <h1 class="h4 fw-bold mb-1" style="color:#421944;">
-                📊 Avaliações do Momento
+            <p class="text-uppercase small text-muted mb-1">Relatório anónimo</p>
+            <h1 class="h3 fw-bold mb-1" style="color:#421944;">
+                Avaliação — {{ $atividade->descricao }}
             </h1>
             <p class="text-muted mb-0">
-                <strong>{{ $atividade->descricao }}</strong> —
                 {{ \Carbon\Carbon::parse($atividade->dia)->format('d/m/Y') }}
                 @if($atividade->municipios->isNotEmpty())
                     · {{ $atividade->municipios->map(fn($m) => $m->nome_com_estado ?? $m->nome)->join(', ') }}
@@ -32,7 +31,6 @@
         </div>
     </div>
 
-    {{-- Alerta de anonimato --}}
     <div class="alert alert-info d-flex align-items-center gap-2 mb-4" role="alert">
         <span style="font-size:1.2rem;">🔒</span>
         <div>
@@ -42,121 +40,82 @@
         </div>
     </div>
 
-    {{-- Resumo --}}
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-md-3">
-            <div class="card text-center border-0 shadow-sm h-100">
+    <div class="row g-3 mb-3">
+        <div class="col-lg-3 col-sm-6">
+            <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <div class="h2 fw-bold mb-0" style="color:#421944;">{{ $totais['submissoes'] ?? $submissoes->count() }}</div>
-                    <div class="text-muted small mt-1">Submissões registadas</div>
-                    @if(($submissoesComRespostas ?? 0) !== $submissoes->count())
-                        <div class="text-muted small">{{ $submissoesComRespostas }} com respostas preenchidas</div>
-                    @endif
+                    <p class="text-uppercase small text-muted mb-1">Submissões</p>
+                    <div class="h3 fw-bold mb-0" style="color:#421944;">{{ number_format($totais['submissoes'] ?? 0, 0, ',', '.') }}</div>
+                    <small class="text-muted">Respostas completas registadas</small>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-md-9">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body d-flex align-items-center">
-                    <div>
-                        <div class="fw-semibold mb-1">Formulário aplicado</div>
-                        <div class="text-muted small">
-                            {{ $avaliacao->templateAvaliacao->nome ?? '—' }}
-                            &nbsp;·&nbsp;
-                            {{ $avaliacao->avaliacaoQuestoes->count() }} questão(ões)
-                        </div>
-                    </div>
+        <div class="col-lg-3 col-sm-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <p class="text-uppercase small text-muted mb-1">Questões com resposta</p>
+                    <div class="h3 fw-bold mb-0" style="color:#421944;">{{ number_format($totais['questoes'] ?? 0, 0, ',', '.') }}</div>
+                    <small class="text-muted">Com alguma resposta agregada</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-sm-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <p class="text-uppercase small text-muted mb-1">Itens de resposta</p>
+                    <div class="h3 fw-bold mb-0" style="color:#421944;">{{ number_format($totais['respostas'] ?? 0, 0, ',', '.') }}</div>
+                    <small class="text-muted">Total de campos preenchidos</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-sm-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <p class="text-uppercase small text-muted mb-1">Última resposta</p>
+                    <div class="h4 fw-bold mb-0" style="color:#421944;">{{ $totais['ultima'] ?? '—' }}</div>
+                    <small class="text-muted">Data/hora do último envio</small>
                 </div>
             </div>
         </div>
     </div>
 
     @if($submissoes->isEmpty())
-        <div class="alert alert-warning">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body py-3">
+                <div class="fw-semibold mb-1">Formulário aplicado</div>
+                <div class="text-muted small">
+                    {{ $avaliacao->templateAvaliacao->nome ?? '—' }}
+                    &nbsp;·&nbsp;
+                    {{ $avaliacao->avaliacaoQuestoes->count() }} questão(ões) no modelo
+                </div>
+            </div>
+        </div>
+        <div class="alert alert-warning mb-0">
             Nenhuma avaliação recebida ainda para este momento.
         </div>
     @else
-
-        {{-- Resumo agregado por questão (mesma lógica que o PDF / dashboard) --}}
-        <div class="card shadow-sm mb-4">
-            <div class="card-header fw-semibold" style="background:#f3eaf5; color:#421944;">
-                Resumo das respostas por questão
-            </div>
-            <div class="card-body p-0">
-                @forelse($perguntas ?? [] as $p)
-                @php
-                    $tipo = $p['tipo'] ?? 'texto';
-                    $labels = $p['labels'] ?? [];
-                    $values = $p['values'] ?? [];
-                @endphp
-                <div class="border-bottom p-3">
-                    <div class="fw-semibold mb-2 small text-uppercase text-muted">
-                        Questão {{ $loop->iteration }}
-                    </div>
-                    <div class="mb-2">{{ $p['texto'] ?? 'Questão' }}</div>
-
-                    @if(($p['total'] ?? 0) === 0)
-                        <span class="text-muted small">Sem respostas registadas.</span>
-                    @elseif($tipo === 'texto')
-                        @php
-                            $lista = $p['respostas'] ?? [];
-                            $mostrar = array_slice($lista, 0, 50);
-                            $totalLista = $p['respostas_total'] ?? count($lista);
-                        @endphp
-                        <div class="text-muted small mb-1">
-                            {{ $totalLista }} resposta(s) aberta(s)
-                            @if(!empty($p['respostas_truncadas']) || count($lista) > 50)
-                                (a mostrar {{ count($mostrar) }} nesta página)
-                            @endif
-                            :
-                        </div>
-                        <ul class="list-group list-group-flush">
-                            @foreach($mostrar as $txt)
-                            <li class="list-group-item py-1 px-0 border-0 small">
-                                "{{ $txt }}"
-                            </li>
-                            @endforeach
-                        </ul>
-                        @if(!empty($p['respostas_truncadas']))
-                            <p class="text-muted small mb-0 mt-1">Lista truncada no resumo agregado (limite de 250 respostas de texto; o PDF segue a mesma regra).</p>
-                        @endif
-                    @elseif($tipo === 'numero')
-                        <div class="text-muted small">
-                            Média: <strong>{{ isset($p['media']) ? number_format($p['media'], 2, ',', '.') : '—' }}</strong>
-                            @if(isset($p['min'], $p['max']))
-                                &nbsp;· Mín: {{ $p['min'] }} · Máx: {{ $p['max'] }}
-                            @endif
-                            &nbsp;· {{ $p['total'] ?? 0 }} resposta(s)
-                        </div>
-                    @else
-                        {{-- escala, boolean: distribuição por labels --}}
-                        <div class="d-flex flex-wrap gap-2 mt-1">
-                            @foreach($labels as $idx => $label)
-                            @php
-                                $raw = (string) $label;
-                                $rotulo = $raw === 'Nao' ? 'Não' : $raw;
-                                $qtd = (int) ($values[$idx] ?? 0);
-                            @endphp
-                            <span class="badge rounded-pill"
-                                  style="background:#421944; font-size:.85rem; padding:.4em .8em;">
-                                {{ $rotulo }}: <strong>{{ $qtd }}</strong>
-                            </span>
-                            @endforeach
-                        </div>
-                        <div class="text-muted small mt-1">{{ $p['total'] ?? 0 }} resposta(s)
-                            @if(!empty($p['resumo']))
-                                · {{ $p['resumo'] }}
-                            @endif
-                        </div>
-                    @endif
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body py-3">
+                <div class="fw-semibold mb-1">Formulário aplicado</div>
+                <div class="text-muted small">
+                    {{ $avaliacao->templateAvaliacao->nome ?? '—' }}
+                    &nbsp;·&nbsp;
+                    {{ $avaliacao->avaliacaoQuestoes->count() }} questão(ões) no modelo
                 </div>
-                @empty
-                <div class="p-3 text-muted small">Nenhuma resposta agregada para exibir.</div>
-                @endforelse
             </div>
         </div>
 
-        {{-- Tabela de submissões (anónima — apenas número e data) --}}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+            <h2 class="h5 fw-bold mb-0" style="color:#421944;">Distribuição por questão</h2>
+            <span class="badge bg-primary-subtle text-primary">Interativo · padrão: barras horizontais</span>
+        </div>
+
+        {{-- vstack no JS: cabeçalhos em largura total; cada indicador tem a sua própria .row com 2 colunas --}}
+        <div id="avaliacoes-momento-root" class="mb-4">
+            <script type="application/json" id="avaliacoes-perguntas-json">@json($perguntas ?? [])</script>
+            <div class="vstack gap-4" id="cards-questoes-momento"></div>
+        </div>
+
         <div class="card shadow-sm">
             <div class="card-header fw-semibold" style="background:#f3eaf5; color:#421944;">
                 Lista de submissões ({{ $submissoes->count() }} no total)
@@ -181,7 +140,7 @@
                                     <span class="badge bg-light text-dark border me-1 mb-1"
                                           style="font-size:.75rem; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block;"
                                           title="{{ $resp->avaliacaoQuestao?->texto }}: {{ $resp->resposta }}">
-                                        {{ \Illuminate\Support\Str::limit((string) $resp->resposta, 40) }}
+                                        {{ Str::limit((string) $resp->resposta, 40) }}
                                     </span>
                                     @empty
                                     <span class="text-muted small">Nenhuma resposta nesta submissão</span>
@@ -194,14 +153,66 @@
                 </div>
             </div>
         </div>
-
     @endif
 
 </div>
+
+<div class="modal fade" id="textAnswersModalMomento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title js-text-modal-title">Respostas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-muted small mb-2 js-text-modal-count"></div>
+                <div class="vstack gap-2 js-text-modal-list" style="max-height: 60vh; overflow: auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
+@push('styles')
+<style>
+  /*
+   * Duas colunas (md+): col-md-6 = 50%. Com só um cartão na linha (ex.: 1 questão por indicador),
+   * o cartão ficava à esquerda e a metade direita parecia “vazia” — não era outra tela nem cache.
+   * Órfãos na linha ocupam largura total.
+   */
+  @media (min-width: 768px) {
+    #cards-questoes-momento .row.g-3 > .col-md-6:only-child,
+    #cards-questoes-momento .row.g-3 > .col-md-6:nth-child(odd):nth-last-child(1) {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+  }
+  /* Grelha em duas colunas: evita que a coluna flex “empurre” o gráfico para metade vazia */
+  #cards-questoes-momento .row > [class*="col-"] {
+    min-width: 0;
+  }
+  #cards-questoes-momento .question-body {
+    min-width: 0;
+  }
+  @media (max-width: 576px) {
+    #cards-questoes-momento .question-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    #cards-questoes-momento .question-controls {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    #cards-questoes-momento .question-controls select {
+      width: 100%;
+      max-width: none;
+    }
+  }
+</style>
+@endpush
+
 @push('scripts')
-<script>
-// Apenas garante que nenhum dado identificador seja exposto via JS
-</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+@vite(['resources/js/avaliacoes-distribuicao-charts.js'])
 @endpush
