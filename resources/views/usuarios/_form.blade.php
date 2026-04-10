@@ -146,6 +146,17 @@
               </select>
               @error('municipio_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
             </div>
+
+              <div class="col-md-12 mb-3">
+                  <div class="form-check mt-2">
+                      <input type="hidden" name="autorizacao_imagem" value="0">
+                      <input class="form-check-input" type="checkbox" id="autorizacao_imagem" name="autorizacao_imagem" value="1"
+                          {{ old('autorizacao_imagem', $user->participante->autorizacao_imagem ?? false) ? 'checked' : '' }}>
+                      <label class="form-check-label" for="autorizacao_imagem">
+                          Autorização de uso de imagem
+                      </label>
+                  </div>
+              </div>
           </div>
         </div>
       </div>
