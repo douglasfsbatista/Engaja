@@ -70,44 +70,35 @@
 </table>
 
 {{-- RELATÓRIOS INDIVIDUAIS --}}
-@foreach($relatorios as $index => $relatorio)
-@php
-    $nomeResponsavel = $relatorio->user->name ?? $relatorio->nome_educador ?? 'Usuário não identificado';
-    $checklistSalvo = $relatorio->checklist_pos_acao ?? [];
-@endphp
+<div class="separator"></div>
 
-<div class="{{ $index > 0 ? 'page-break' : 'separator' }}"></div>
+<h2>Perguntas e Respostas Consolidadas</h2>
+<p class="muted">Cada pergunta abaixo reúne todas as respostas enviadas para este mesmo momento.</p>
 
-<h2>Relatório {{ $index + 1 }} de {{ $relatorios->count() }}</h2>
-<p>
-    <strong>Preenchido por:</strong> {{ $nomeResponsavel }}
-    <span class="muted small">
-        • {{ $relatorio->updated_at ? $relatorio->updated_at->format('d/m/Y H:i') : '—' }}
-    </span>
-</p>
-
-<h3>Perguntas e Respostas</h3>
-@foreach($camposPerguntas as $campo => $pergunta)
+@foreach($respostasPorPergunta as $indexPergunta => $itemPergunta)
     <div class="question">
-        <div><strong>{{ $pergunta }}</strong></div>
-        <div class="answer">{{ $relatorio->$campo ?: '—' }}</div>
+        <div><strong>{{ $itemPergunta['pergunta'] }}</strong></div>
+
+        @if($itemPergunta['respostas']->isEmpty())
+            <div class="answer muted">Nenhuma resposta registrada.</div>
+        @else
+            @foreach($itemPergunta['respostas'] as $resposta)
+                <div class="answer" style="margin-top: 6px;">
+                    <div class="small muted">
+                        <strong>Responsável:</strong> {{ $resposta['responsavel_nome'] }}
+                        @if(!empty($resposta['atualizado_em']))
+                            | <strong>Enviado em:</strong> {{ $resposta['atualizado_em']->format('d/m/Y') }}
+                        @endif
+                    </div>
+                    <div style="margin-top: 4px;">{{ $resposta['resposta'] }}</div>
+                </div>
+            @endforeach
+        @endif
     </div>
+
+    @if(! $loop->last)
+        <div style="margin-top: 12px; border-top: 1px dashed #bbb;"></div>
+    @endif
 @endforeach
-
-<h3>Checklist Pós-ação</h3>
-@if(empty($checklistSalvo))
-    <p class="muted">Nenhum item marcado.</p>
-@else
-    <ul>
-        @foreach($checklistLabels as $valor => $label)
-            @if(in_array($valor, $checklistSalvo, true))
-                <li class="small">{{ $label }}</li>
-            @endif
-        @endforeach
-    </ul>
-@endif
-
-@endforeach
-
 </body>
 </html>
