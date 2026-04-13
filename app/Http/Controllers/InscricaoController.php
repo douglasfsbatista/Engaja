@@ -52,11 +52,13 @@ class InscricaoController extends Controller
         $sheet->setTitle('momentos');
 
         $sheet->setCellValue('A1', 'momento');
-        $sheet->setCellValue('B1', 'carga_horaria');
+        $sheet->setCellValue('B1', 'horas');
+        $sheet->setCellValue('C1', 'minutos');
 
-        $sheet->getStyle('A1:B1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:C1')->getFont()->setBold(true);
         $sheet->getColumnDimension('A')->setAutoSize(true);
         $sheet->getColumnDimension('B')->setWidth(18);
+        $sheet->getColumnDimension('C')->setWidth(18);
 
         $fileName = 'modelo_momentos_moodle.xlsx';
 
@@ -218,13 +220,13 @@ class InscricaoController extends Controller
                     $horaInicio = '08:00';
                     $horaFim = '09:00';
 
-                    if (is_int($carga) && $carga > 0 && $carga <= 12) {
+                    if (is_int($carga) && $carga > 0 && $carga <= 720) {
                         $horaFim = Carbon::createFromFormat('H:i', $horaInicio)
-                            ->addHours($carga)
+                            ->addMinutes($carga)
                             ->format('H:i');
                     }
 
-                    $cargaMinutos = is_int($carga) ? $carga * 60 : null;
+                    $cargaMinutos = is_int($carga) ? $carga : null;
 
                     $atividade = $evento->atividades()->create([
                         'descricao' => $nome,
@@ -237,7 +239,7 @@ class InscricaoController extends Controller
                     $momentoCriado++;
                     $atividadesByName->put($key, $atividade);
                 } else {
-                    $cargaMinutosEsperada = is_int($carga) ? $carga * 60 : null;
+                    $cargaMinutosEsperada = is_int($carga) ? $carga : null;
                     if (is_int($carga) && $cargaMinutosEsperada !== null && $atividade->carga_horaria !== $cargaMinutosEsperada) {
                         $atividade->update(['carga_horaria' => $cargaMinutosEsperada]);
                         $momentoAtualizado++;
@@ -254,35 +256,66 @@ class InscricaoController extends Controller
                 ->unique()
                 ->values();
 
+            $nomes = $participants
+                ->pluck('nome')
+                ->map(fn ($nome) => $this->normalizePersonName((string) $nome))
+                ->filter()
+                ->unique()
+                ->values();
+
+            $cpfs = $participants
+                ->pluck('cpf')
+                ->map(fn ($cpf) => $this->normalizeCpf((string) $cpf))
+                ->filter()
+                ->unique()
+                ->values();
+
             $usersByEmail = $this->fetchUsersByEmailInsensitive($emails);
+            $usersByName = $this->fetchUsersByNameInsensitive($nomes);
+            $participantesByCpf = $this->fetchParticipantesByCpfInsensitive($cpfs);
+
+            $candidateUserIds = $usersByEmail->pluck('id')
+                ->merge($usersByName->pluck('id'))
+                ->merge($participantesByCpf->pluck('user_id'))
+                ->filter()
+                ->unique()
+                ->values();
 
             // Coletar usuários não encontrados no Engaja (não cria mais)
             $usuariosNaoEncontrados = [];
             foreach ($participants as $row) {
                 $email = strtolower(trim((string) ($row['email'] ?? '')));
                 $nome = trim((string) ($row['nome'] ?? ''));
+                $nomeNormalizado = $this->normalizePersonName($nome);
+                $cpf = $this->normalizeCpf((string) ($row['cpf'] ?? ''));
                 $linha = $row['line'] ?? null;
 
-                if ($email === '') {
-                    $usuariosNaoEncontrados[] = [
-                        'linha' => $linha,
-                        'nome' => $nome !== '' ? $nome : '(sem nome)',
-                        'email' => '(sem email)',
-                    ];
-
-                    continue;
+                $userEncontrado = null;
+                if ($email !== '' && $usersByEmail->has($email)) {
+                    $userEncontrado = $usersByEmail->get($email);
                 }
 
-                if (! $usersByEmail->has($email)) {
+                if (! $userEncontrado && $cpf !== '' && $participantesByCpf->has($cpf)) {
+                    $participantePorCpf = $participantesByCpf->get($cpf);
+                    if ($participantePorCpf && $participantePorCpf->user) {
+                        $userEncontrado = $participantePorCpf->user;
+                    }
+                }
+
+                if (! $userEncontrado && $nomeNormalizado !== '' && $usersByName->has($nomeNormalizado)) {
+                    $userEncontrado = $usersByName->get($nomeNormalizado);
+                }
+
+                if (! $userEncontrado) {
                     $usuariosNaoEncontrados[] = [
                         'linha' => $linha,
                         'nome' => $nome !== '' ? $nome : '(sem nome)',
-                        'email' => $email,
+                        'email' => $email !== '' ? $email : '(sem email)',
                     ];
                 }
             }
 
-            $participantesByUser = Participante::whereIn('user_id', $usersByEmail->pluck('id')->values())
+            $participantesByUser = Participante::whereIn('user_id', $candidateUserIds)
                 ->get()
                 ->keyBy('user_id');
 
@@ -291,11 +324,30 @@ class InscricaoController extends Controller
 
             foreach ($participants as $row) {
                 $email = strtolower(trim((string) ($row['email'] ?? '')));
-                if (! $usersByEmail->has($email)) {
+                $nome = trim((string) ($row['nome'] ?? ''));
+                $nomeNormalizado = $this->normalizePersonName($nome);
+                $cpf = $this->normalizeCpf((string) ($row['cpf'] ?? ''));
+
+                $user = null;
+                if ($email !== '' && $usersByEmail->has($email)) {
+                    $user = $usersByEmail->get($email);
+                }
+
+                if (! $user && $cpf !== '' && $participantesByCpf->has($cpf)) {
+                    $participantePorCpf = $participantesByCpf->get($cpf);
+                    if ($participantePorCpf && $participantePorCpf->user) {
+                        $user = $participantePorCpf->user;
+                    }
+                }
+
+                if (! $user && $nomeNormalizado !== '' && $usersByName->has($nomeNormalizado)) {
+                    $user = $usersByName->get($nomeNormalizado);
+                }
+
+                if (! $user) {
                     continue;
                 }
 
-                $user = $usersByEmail->get($email);
                 $participante = $participantesByUser->get($user->id);
                 if (! $participante) {
                     $participante = Participante::create(['user_id' => $user->id]);
@@ -478,11 +530,13 @@ class InscricaoController extends Controller
             'endereco_de_e_mail',
             'endereco_de_email',
         ];
+        $acceptedCpf = ['cpf', 'documento', 'cpf_do_participante'];
 
         $idxNome = $this->findMoodleHeaderIndex($headersNorm, $acceptedNome);
         $idxEmail = $this->findMoodleHeaderIndex($headersNorm, [
             ...$acceptedEmail,
         ]);
+        $idxCpf = $this->findMoodleHeaderIndex($headersNorm, $acceptedCpf);
 
         if ($idxNome === null && $idxEmail !== null) {
             if ($idxEmail > 0) {
@@ -531,6 +585,7 @@ class InscricaoController extends Controller
 
             $nome = $idxNome !== null ? trim((string) ($row[$idxNome] ?? '')) : '';
             $email = strtolower(trim((string) ($row[$idxEmail] ?? '')));
+            $cpf = $idxCpf !== null ? $this->normalizeCpf((string) ($row[$idxCpf] ?? '')) : '';
 
             // Se não tem nome e não tem email, pular linha vazia
             if ($nome === '' && $email === '') {
@@ -572,6 +627,7 @@ class InscricaoController extends Controller
                 'line' => $line,
                 'nome' => $nome,
                 'email' => $email,
+                'cpf' => $cpf,
                 'status_por_momento' => $statusByMoment,
             ];
         }
@@ -610,18 +666,39 @@ class InscricaoController extends Controller
     {
         $headersRaw = array_map(fn ($v) => trim((string) $v), $sheet[0] ?? []);
         $headersNorm = array_map(fn ($v) => $this->normalizeMoodleHeader($v), $headersRaw);
+        $secondaryHeadersRaw = array_map(fn ($v) => trim((string) $v), $sheet[1] ?? []);
+        $secondaryHeadersNorm = array_map(fn ($v) => $this->normalizeMoodleHeader($v), $secondaryHeadersRaw);
 
         $acceptedMomento = ['momento', 'momentos', 'atividade', 'nome_momento', 'nome_do_momento', 'nome', 'descricao'];
-        $acceptedCarga = ['carga_horaria', 'carga_horaria_do_momento', 'carga', 'horas', 'hora', 'duracao', 'duracao_horas'];
+        $acceptedCarga = ['carga_horaria', 'carga_horaria_do_momento', 'carga', 'duracao', 'duracao_horas'];
+        $acceptedHoras = ['horas', 'hora'];
+        $acceptedMinutos = ['minutos', 'minuto', 'mins', 'min'];
 
         $idxMomento = $this->findMoodleHeaderIndex($headersNorm, $acceptedMomento);
         $idxCarga = $this->findMoodleHeaderIndex($headersNorm, $acceptedCarga);
+        $idxHoras = $this->findMoodleHeaderIndex($headersNorm, $acceptedHoras);
+        $idxMinutos = $this->findMoodleHeaderIndex($headersNorm, $acceptedMinutos);
+        $startRow = 1;
 
-        if ($idxMomento === null || $idxCarga === null) {
+        $hasSubHeaderHorasMinutos =
+            $this->findMoodleHeaderIndex($secondaryHeadersNorm, $acceptedHoras) !== null
+            || $this->findMoodleHeaderIndex($secondaryHeadersNorm, $acceptedMinutos) !== null;
+
+        if (($idxHoras === null && $idxMinutos === null) && $hasSubHeaderHorasMinutos) {
+            $idxHoras = $this->findMoodleHeaderIndex($secondaryHeadersNorm, $acceptedHoras);
+            $idxMinutos = $this->findMoodleHeaderIndex($secondaryHeadersNorm, $acceptedMinutos);
+            $startRow = 2;
+
+            if ($idxMomento === null) {
+                $idxMomento = $this->findMoodleHeaderIndex($secondaryHeadersNorm, $acceptedMomento);
+            }
+        }
+
+        if ($idxMomento === null || ($idxCarga === null && $idxHoras === null && $idxMinutos === null)) {
             throw new \RuntimeException(
-                'A planilha de cargas precisa conter colunas de momento e carga horária. '
+                'A planilha de cargas precisa conter colunas de momento e carga horária (carga_horaria) ou horas/minutos. '
                 .'Aceitos para momento: ['.implode(', ', $acceptedMomento).']. '
-                .'Aceitos para carga: ['.implode(', ', $acceptedCarga).']. '
+                .'Aceitos para carga: ['.implode(', ', array_merge($acceptedCarga, $acceptedHoras, $acceptedMinutos)).']. '
                 .'Colunas encontradas: '.$this->formatMoodleHeadersForError($headersRaw)
             );
         }
@@ -630,14 +707,16 @@ class InscricaoController extends Controller
         $errors = [];
         $moments = [];
 
-        for ($i = 1; $i < count($sheet); $i++) {
+        for ($i = $startRow; $i < count($sheet); $i++) {
             $line = $i + 1;
             $row = $sheet[$i] ?? [];
 
             $momento = trim((string) ($row[$idxMomento] ?? ''));
-            $cargaRaw = trim((string) ($row[$idxCarga] ?? ''));
+            $cargaRaw = $idxCarga !== null ? trim((string) ($row[$idxCarga] ?? '')) : '';
+            $horasRaw = $idxHoras !== null ? trim((string) ($row[$idxHoras] ?? '')) : '';
+            $minutosRaw = $idxMinutos !== null ? trim((string) ($row[$idxMinutos] ?? '')) : '';
 
-            if ($momento === '' && $cargaRaw === '') {
+            if ($momento === '' && $cargaRaw === '' && $horasRaw === '' && $minutosRaw === '') {
                 continue;
             }
 
@@ -647,20 +726,64 @@ class InscricaoController extends Controller
                 continue;
             }
 
-            if ($cargaRaw === '' || ! is_numeric($cargaRaw)) {
-                $errors[] = "Linha {$line}: carga horária inválida para o momento '{$momento}'.";
+            $temPartes = $horasRaw !== '' || $minutosRaw !== '';
+            $temCargaLegada = $cargaRaw !== '';
 
-                continue;
+            if ($temPartes || ($idxHoras !== null || $idxMinutos !== null)) {
+                // Se a planilha tem colunas de horas/minutos e a linha veio vazia,
+                // assume 0 para o campo vazio; se ambos vazios, total = 0.
+                if (! $temPartes && $temCargaLegada) {
+                    if (! is_numeric($cargaRaw) || (int) $cargaRaw < 0) {
+                        $errors[] = "Linha {$line}: carga horária inválida para o momento '{$momento}'.";
+                        continue;
+                    }
+
+                    $totalMinutos = ((int) $cargaRaw) * 60;
+                    $workloadsMap[$momento] = $totalMinutos;
+                    $moments[] = $momento;
+                    continue;
+                }
+
+                $horas = 0;
+                $minutos = 0;
+
+                if ($horasRaw !== '') {
+                    if (! is_numeric($horasRaw) || (int) $horasRaw < 0) {
+                        $errors[] = "Linha {$line}: horas inválidas para o momento '{$momento}'.";
+                        continue;
+                    }
+                    $horas = (int) $horasRaw;
+                }
+
+                if ($minutosRaw !== '') {
+                    if (! is_numeric($minutosRaw) || (int) $minutosRaw < 0) {
+                        $errors[] = "Linha {$line}: minutos inválidos para o momento '{$momento}'.";
+                        continue;
+                    }
+                    $minutos = (int) $minutosRaw;
+                    if ($minutos > 59) {
+                        $errors[] = "Linha {$line}: minutos devem estar entre 0 e 59 para o momento '{$momento}'.";
+                        continue;
+                    }
+                }
+
+                $totalMinutos = ($horas * 60) + $minutos;
+            } else {
+                if ($cargaRaw === '' || ! is_numeric($cargaRaw)) {
+                    $errors[] = "Linha {$line}: carga horária inválida para o momento '{$momento}'.";
+                    continue;
+                }
+
+                $carga = (int) $cargaRaw;
+                if ($carga < 0) {
+                    $errors[] = "Linha {$line}: carga horária negativa para o momento '{$momento}'.";
+                    continue;
+                }
+
+                $totalMinutos = $carga * 60;
             }
 
-            $carga = (int) $cargaRaw;
-            if ($carga < 0) {
-                $errors[] = "Linha {$line}: carga horária negativa para o momento '{$momento}'.";
-
-                continue;
-            }
-
-            $workloadsMap[$momento] = $carga;
+            $workloadsMap[$momento] = $totalMinutos;
             $moments[] = $momento;
         }
 
@@ -767,6 +890,66 @@ class InscricaoController extends Controller
             ->whereIn(DB::raw('LOWER(email)'), $normalizedEmails->all())
             ->get()
             ->keyBy(fn ($user) => strtolower(trim((string) $user->email)));
+    }
+
+    private function fetchUsersByNameInsensitive(Collection $names): Collection
+    {
+        $normalizedNames = $names
+            ->map(fn ($name) => $this->normalizePersonName((string) $name))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($normalizedNames->isEmpty()) {
+            return collect();
+        }
+
+        $users = User::query()
+            ->whereIn(DB::raw('LOWER(TRIM(name))'), $normalizedNames->all())
+            ->get();
+
+        // Em caso de nomes duplicados no sistema, não faz vinculação automática por nome.
+        $grouped = $users->groupBy(fn ($user) => $this->normalizePersonName((string) $user->name));
+
+        return $grouped
+            ->filter(fn ($group) => $group->count() === 1)
+            ->map(fn ($group) => $group->first());
+    }
+
+    private function fetchParticipantesByCpfInsensitive(Collection $cpfs): Collection
+    {
+        $normalizedCpfs = $cpfs
+            ->map(fn ($cpf) => $this->normalizeCpf((string) $cpf))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($normalizedCpfs->isEmpty()) {
+            return collect();
+        }
+
+        $participantes = Participante::query()
+            ->with('user')
+            ->whereIn(
+                DB::raw("REPLACE(REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), '/', ''), ' ', '')"),
+                $normalizedCpfs->all()
+            )
+            ->get();
+
+        return $participantes->mapWithKeys(function ($participante) {
+            $cpf = $this->normalizeCpf((string) ($participante->cpf ?? ''));
+            return $cpf !== '' ? [$cpf => $participante] : [];
+        });
+    }
+
+    private function normalizePersonName(string $name): string
+    {
+        return mb_strtolower(preg_replace('/\s+/', ' ', trim($name)) ?: '');
+    }
+
+    private function normalizeCpf(string $cpf): string
+    {
+        return preg_replace('/\D+/', '', $cpf) ?: '';
     }
 
     private function formatMoodleHeadersForError(array $headersRaw): string
