@@ -101,6 +101,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
         Route::resource('dimensaos', DimensaoController::class);
         Route::resource('indicadors', IndicadorController::class);
+        Route::post('evidencias/{evidencia}/duplicar', [EvidenciaController::class, 'duplicar'])->name('evidencias.duplicar');
         Route::resource('evidencias', EvidenciaController::class);
         Route::resource('escalas', EscalaController::class);
         Route::resource('questaos', QuestaoController::class);

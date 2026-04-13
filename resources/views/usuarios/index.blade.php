@@ -5,10 +5,13 @@
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
         <div>
             <p class="text-uppercase text-muted small mb-1">Administração</p>
-            <h1 class="h4 fw-bold text-engaja mb-0">Gerenciar Usuários</h1>
+            <h1 class="h4 fw-bold text-engaja mb-2">Gerenciar Usuários</h1>
         </div>
         @hasanyrole('administrador|gerente|eq_pedagogica|articulador')
         <div class="d-flex gap-2">
+            <button type="button" class="btn btn-engaja" data-bs-toggle="modal" data-bs-target="#modalExportarUsuarios">
+                Baixar planilha de usuários
+            </button>
             <a href="{{ route('usuarios.autorizacoes.import') }}" class="btn btn-engaja">Importar Autorizações de Imagem</a>
             <a href="{{ route('usuarios.create') }}" class="btn btn-engaja">Cadastrar Usuário</a>
         </div>
@@ -135,24 +138,23 @@
           </table>
         </div>
       </div>
-      <div class="card-footer bg-white d-flex justify-content-between align-items-center">
-        <div class="text-muted small">Selecione participantes e clique em Emitir certificados.</div>
-        {{ $users->links() }}
+        {{--
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+          <div class="text-muted small">Selecione participantes e clique em Emitir certificados.</div>
+          {{ $users->links() }}
+        </div>
+        --}}
       </div>
-    </div>
 
 
-    <div class="mt-3 text-end d-flex flex-wrap justify-content-end gap-2">
-    @can('user.ver')
-        <button type="button" class="btn btn-engaja" data-bs-toggle="modal" data-bs-target="#modalExportarUsuarios">
-            Baixar planilha de usuários
-        </button>
-    @endcan
-    @hasanyrole('administrador|gerente')
-      <button type="button" class="btn btn-outline-secondary" id="btn-select-all-page">Selecionar todos da página</button>
-      <button type="button" class="btn btn-outline-secondary" id="btn-select-all-global">Selecionar todos (todas as páginas)</button>
-      <button type="button" class="btn btn-engaja" id="btn-open-modal">Emitir certificados</button>
-    @endhasanyrole
+      <div class="mt-3 text-end d-flex flex-wrap justify-content-end gap-2">
+      {{--
+      @hasanyrole('administrador|gerente')
+        <button type="button" class="btn btn-outline-secondary" id="btn-select-all-page">Selecionar todos da página</button>
+        <button type="button" class="btn btn-outline-secondary" id="btn-select-all-global">Selecionar todos (todas as páginas)</button>
+        <button type="button" class="btn btn-engaja" id="btn-open-modal">Emitir certificados</button>
+      @endhasanyrole
+      --}}
     </div>
   </form>
 
