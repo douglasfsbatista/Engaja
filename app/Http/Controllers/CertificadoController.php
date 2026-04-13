@@ -100,6 +100,7 @@ class CertificadoController extends Controller
                 $cert = Certificado::create([
                     'modelo_certificado_id' => $modelo->id,
                     'participante_id' => $participante->id,
+                    'evento_id' => $evento->id,
                     'evento_nome' => $evento->nome,
                     'codigo_validacao' => Str::uuid()->toString(),
                     'ano' => (int) ($evento->data_inicio ? date('Y', strtotime($evento->data_inicio)) : date('Y')),
@@ -309,6 +310,7 @@ class CertificadoController extends Controller
                 $cert = Certificado::create([
                     'modelo_certificado_id' => $modelo->id,
                     'participante_id' => $participante->id,
+                    'evento_id' => $evento->id,
                     'evento_nome' => $evento->nome,
                     'codigo_validacao' => Str::uuid()->toString(),
                     'ano' => (int) ($evento->data_inicio ? date('Y', strtotime($evento->data_inicio)) : date('Y')),
@@ -486,6 +488,7 @@ class CertificadoController extends Controller
         $certificado->modelo = $modelo;
         $certificado->texto_frente = strtr($modelo->texto_frente ?? '', $map);
         $certificado->texto_verso = strtr($modelo->texto_verso ?? '', $map);
+        $certificado->evento_id = isset($evento) ? $evento->id : null;
         $certificado->evento_nome = $eventoNome;
         $certificado->codigo_validacao = null;
         $certificado->carga_horaria = 600;
