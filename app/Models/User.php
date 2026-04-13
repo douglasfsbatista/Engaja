@@ -25,7 +25,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'force_password_change',
         'profile_photo_path',
         'identidade_genero',
         'identidade_genero_outro',
@@ -58,7 +57,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'force_password_change' => 'boolean',
         ];
     }
 
