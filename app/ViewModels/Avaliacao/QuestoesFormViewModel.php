@@ -220,6 +220,15 @@ class QuestoesFormViewModel implements Arrayable
             ? ($questao->fixa ? $questao->escala_id : null)
             : $escalaSelecionada;
 
+        $opcoesResposta = $questao->fixa
+            ? ($questao->opcoes_resposta ?? [])
+            : ($personalizacao['opcoes_resposta'] ?? ($questao->opcoes_resposta ?? []));
+
+        $opcoesResposta = collect($this->oldValue("$baseKey.opcoes_resposta", $opcoesResposta))
+            ->filter(fn ($opcao) => is_string($opcao) && trim($opcao) !== '')
+            ->values()
+            ->all();
+
         $indicadorAtual = $questao->indicador;
         if (! $questao->fixa && $evidenciaSelecionada !== null) {
             $evidenciaLookup = (int) $evidenciaSelecionada;
@@ -308,11 +317,13 @@ class QuestoesFormViewModel implements Arrayable
                     'visible' => $tipoSelecionado === 'escala',
                 ],
             ],
+            'opcoes_resposta' => $opcoesResposta,
             'resposta' => [
                 'show' => $this->exibirRespostas,
                 'tipo' => $tipoSelecionado,
                 'valor' => $respostaAtual,
                 'escala_opcoes' => $opcoesEscala,
+                'opcoes_resposta' => $opcoesResposta,
             ],
         ];
     }
@@ -348,6 +359,11 @@ class QuestoesFormViewModel implements Arrayable
                 $ordemValue = $this->oldValue("$baseKey.ordem", $questao['ordem'] ?? '');
                 $ordemValue = is_scalar($ordemValue) ? (string) $ordemValue : '';
 
+                $opcoesResposta = collect($this->oldValue("$baseKey.opcoes_resposta", $questao['opcoes_resposta'] ?? []))
+                    ->filter(fn ($opcao) => is_string($opcao) && trim($opcao) !== '')
+                    ->values()
+                    ->all();
+
                 $deleteRaw = $this->oldValue("$baseKey._delete", $questao['_delete'] ?? '0');
                 $deleteValue = (string) $deleteRaw === '1' ? '1' : '0';
 
@@ -357,6 +373,7 @@ class QuestoesFormViewModel implements Arrayable
                         'id' => $questaoId,
                         'texto' => $textoValue,
                         'tipo' => $tipoSelecionado,
+                        'opcoes_resposta' => $opcoesResposta,
                         'evidencia_id' => $evidenciaSelecionada,
                         'escala_id' => $escalaSelecionada,
                         'ordem' => $ordemValue,
@@ -381,6 +398,7 @@ class QuestoesFormViewModel implements Arrayable
                     'id' => null,
                     'texto' => '',
                     'tipo' => 'texto',
+                    'opcoes_resposta' => [],
                     'evidencia_id' => null,
                     'escala_id' => null,
                     'ordem' => '',

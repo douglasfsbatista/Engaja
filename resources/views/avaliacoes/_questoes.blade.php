@@ -113,6 +113,55 @@
                     <div class="invalid-feedback">{{ $questao['form']['escala']['error'] }}</div>
                   @endif
                 </div>
+
+                @php
+                  $opcoesRespostaName = str_replace('[tipo]', '[opcoes_resposta][]', $questao['form']['tipo']['name']);
+                  $opcoesResposta = collect($questao['opcoes_resposta'] ?? []);
+                  if ($opcoesResposta->isEmpty()) {
+                    $opcoesResposta = collect(['']);
+                  }
+                  $opcoesRespostaErrorKey = str_replace(['[', ']'], ['.', ''], $questao['form']['tipo']['name']);
+                  $opcoesRespostaErrorKey = str_replace('.tipo', '.opcoes_resposta', $opcoesRespostaErrorKey);
+                  $opcoesRespostaErro = $errors->first($opcoesRespostaErrorKey);
+                @endphp
+                <div class="col-12 resposta-unica-field" data-resposta-unica-wrapper>
+                  <div class="border rounded p-3 bg-light">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                      <div>
+                        <label class="form-label small text-muted mb-1">Opcoes da resposta unica</label>
+                        <div class="form-text mt-0">Inclua as opcoes exibidas no select.</div>
+                      </div>
+                      <button type="button" class="btn btn-sm btn-outline-primary" data-add-resposta-unica-option>Adicionar opcao</button>
+                    </div>
+                    <div class="d-flex flex-column gap-2" data-resposta-unica-options>
+                      @foreach ($opcoesResposta as $opcao)
+                        <div class="input-group" data-resposta-unica-option>
+                          <input type="text"
+                            name="{{ $opcoesRespostaName }}"
+                            class="form-control{{ $opcoesRespostaErro ? ' is-invalid' : '' }}"
+                            value="{{ $opcao }}"
+                            placeholder="Digite uma opcao"
+                            data-resposta-unica-input
+                            {{ ! empty($questao['form']['disabled']) ? 'disabled' : '' }}>
+                          <button type="button" class="btn btn-outline-danger" data-remove-resposta-unica-option>Remover</button>
+                        </div>
+                      @endforeach
+                    </div>
+                    @if ($opcoesRespostaErro)
+                      <div class="text-danger small mt-2">{{ $opcoesRespostaErro }}</div>
+                    @endif
+                  </div>
+                  <template data-resposta-unica-prototype>
+                    <div class="input-group" data-resposta-unica-option>
+                      <input type="text"
+                        name="{{ $opcoesRespostaName }}"
+                        class="form-control"
+                        placeholder="Digite uma opcao"
+                        data-resposta-unica-input>
+                      <button type="button" class="btn btn-outline-danger" data-remove-resposta-unica-option>Remover</button>
+                    </div>
+                  </template>
+                </div>
               </div>
             @endif
 
@@ -170,6 +219,23 @@
                         </div>
                       @endforeach
                     </div>
+                    @break
+
+                  @case('unica')
+                    @if (empty($questao['resposta']['opcoes_resposta']))
+                      <p class="text-muted small mb-0">
+                        Configure opcoes antes de registrar respostas.
+                      </p>
+                    @else
+                      <select class="form-select"
+                        name="respostas[{{ $questao['key'] }}]"
+                        {{ ! empty($questao['form']['disabled']) ? 'disabled' : '' }}>
+                        <option value="">Selecione...</option>
+                        @foreach ($questao['resposta']['opcoes_resposta'] as $opcao)
+                          <option value="{{ $opcao }}" {{ (string) ($questao['resposta']['valor'] ?? '') === (string) $opcao ? 'selected' : '' }}>{{ $opcao }}</option>
+                        @endforeach
+                      </select>
+                    @endif
                     @break
 
                   @default
@@ -278,6 +344,61 @@
     escalaWrapper.classList.toggle('d-none', !mostrar);
   }
 
+  function setRespostaUnicaRequired(wrapper, required) {
+    wrapper.querySelectorAll('[data-resposta-unica-input]').forEach(input => {
+      if (required) {
+        input.setAttribute('required', 'required');
+      } else {
+        input.removeAttribute('required');
+      }
+    });
+  }
+
+  function addRespostaUnicaOption(card) {
+    if (!card) {
+      return;
+    }
+
+    const optionsList = card.querySelector('[data-resposta-unica-options]');
+    const prototype = card.querySelector('[data-resposta-unica-prototype]');
+    if (!optionsList || !prototype) {
+      return;
+    }
+
+    const index = optionsList.querySelectorAll('[data-resposta-unica-option]').length;
+    const html = prototype.innerHTML.replace(/__OPTION_INDEX__/g, index);
+    optionsList.appendChild(document.createRange().createContextualFragment(html));
+  }
+
+  function toggleRespostaUnica(select) {
+    const questionContainer = select.closest('.question-config');
+    if (!questionContainer) {
+      return;
+    }
+
+    const wrapper = questionContainer.querySelector('[data-resposta-unica-wrapper]');
+    if (!wrapper) {
+      return;
+    }
+
+    const mostrar = select.value === 'unica';
+    wrapper.style.display = mostrar ? '' : 'none';
+
+    if (mostrar && !wrapper.querySelector('[data-resposta-unica-option]')) {
+      addRespostaUnicaOption(questionContainer);
+    }
+
+    setRespostaUnicaRequired(wrapper, mostrar);
+
+    const options = Array.from(wrapper.querySelectorAll('[data-resposta-unica-option]'));
+    options.forEach(option => {
+      const removeButton = option.querySelector('[data-remove-resposta-unica-option]');
+      if (removeButton) {
+        removeButton.disabled = options.length <= 1;
+      }
+    });
+  }
+
   if (selectTemplate) {
     selectTemplate.addEventListener('change', toggleBlocks);
     toggleBlocks();
@@ -312,12 +433,48 @@
       return;
     }
 
-    select.addEventListener('change', () => toggleEscala(select));
+    select.addEventListener('change', () => {
+      toggleEscala(select);
+      toggleRespostaUnica(select);
+    });
     toggleEscala(select);
+    toggleRespostaUnica(select);
     select.dataset.tipoListener = 'true';
   }
 
   document.querySelectorAll('[data-tipo-select]').forEach(select => attachTipoListener(select));
+
+  const blocosQuestoes = document.getElementById('blocos-questoes');
+
+  if (blocosQuestoes) {
+    blocosQuestoes.addEventListener('click', (event) => {
+      const addOptionButton = event.target.closest('[data-add-resposta-unica-option]');
+      if (addOptionButton) {
+        event.preventDefault();
+        const card = addOptionButton.closest('.question-config');
+        addRespostaUnicaOption(card);
+        const tipoSelect = card?.querySelector('[data-tipo-select]');
+        if (tipoSelect) {
+          toggleRespostaUnica(tipoSelect);
+        }
+        return;
+      }
+
+      const removeOptionButton = event.target.closest('[data-remove-resposta-unica-option]');
+      if (removeOptionButton) {
+        event.preventDefault();
+        const card = removeOptionButton.closest('.question-config');
+        const option = removeOptionButton.closest('[data-resposta-unica-option]');
+        if (card && option && card.querySelectorAll('[data-resposta-unica-option]').length > 1) {
+          option.remove();
+        }
+        const tipoSelect = card?.querySelector('[data-tipo-select]');
+        if (tipoSelect) {
+          toggleRespostaUnica(tipoSelect);
+        }
+      }
+    });
+  }
 
   const adicionaisContainer = document.getElementById('questoes-adicionais-container');
   const addAdicionalButton = document.getElementById('btn-add-questao-adicional');
@@ -388,6 +545,34 @@
   }
 
   if (adicionaisContainer) {
+    adicionaisContainer.addEventListener('click', (event) => {
+      const addOptionButton = event.target.closest('[data-add-resposta-unica-option]');
+      if (addOptionButton) {
+        event.preventDefault();
+        const card = addOptionButton.closest('[data-question-card]');
+        addRespostaUnicaOption(card);
+        const tipoSelect = card?.querySelector('[data-tipo-select]');
+        if (tipoSelect) {
+          toggleRespostaUnica(tipoSelect);
+        }
+        return;
+      }
+
+      const removeOptionButton = event.target.closest('[data-remove-resposta-unica-option]');
+      if (removeOptionButton) {
+        event.preventDefault();
+        const card = removeOptionButton.closest('[data-question-card]');
+        const option = removeOptionButton.closest('[data-resposta-unica-option]');
+        if (card && option && card.querySelectorAll('[data-resposta-unica-option]').length > 1) {
+          option.remove();
+        }
+        const tipoSelect = card?.querySelector('[data-tipo-select]');
+        if (tipoSelect) {
+          toggleRespostaUnica(tipoSelect);
+        }
+      }
+    });
+
     adicionaisContainer.addEventListener('click', (event) => {
       const button = event.target.closest('.js-remove-question');
       if (!button) {
