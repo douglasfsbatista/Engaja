@@ -29,7 +29,7 @@
             <p class="text-muted small mb-2">
               Indicador: {{ $questao['meta']['indicador'] ?? '-' }}
               @if (! empty($questao['meta']['dimensao']))
-                &bull; Dimensao: {{ $questao['meta']['dimensao'] }}
+                &bull; Dimensão: {{ $questao['meta']['dimensao'] }}
               @endif
             </p>
 
@@ -37,14 +37,14 @@
               <p class="fw-semibold mb-2">{{ $questao['texto_display'] }}</p>
               <div class="row g-2 text-muted small mb-3">
                 <div class="col-md-4">Tipo: {{ $questao['resumo']['tipo'] ?? '' }}</div>
-                <div class="col-md-4">Evidencia: {{ $questao['resumo']['evidencia'] ?? 'Sem evidencia' }}</div>
+                <div class="col-md-4">Evidência: {{ $questao['resumo']['evidencia'] ?? 'Sem evidência' }}</div>
                 <div class="col-md-4">Escala: {{ $questao['resumo']['escala'] ?? '---' }}</div>
               </div>
             @else
               <div class="row g-3 align-items-start mb-3">
                 <div class="col-12">
                   <label class="form-label small text-muted" for="{{ $questao['form']['texto']['id'] }}">
-                    Ajuste o enunciado para esta avaliacao
+                    Ajuste o enunciado para esta avaliação
                   </label>
                   <textarea
                     class="form-control{{ $questao['form']['texto']['error'] ? ' is-invalid' : '' }}"
@@ -77,7 +77,7 @@
                 </div>
 
                 <div class="col-md-4">
-                  <label class="form-label small text-muted" for="{{ $questao['form']['evidencia']['id'] }}">Evidencia</label>
+                  <label class="form-label small text-muted" for="{{ $questao['form']['evidencia']['id'] }}">Evidência</label>
                   <select
                     class="form-select{{ $questao['form']['evidencia']['error'] ? ' is-invalid' : '' }}"
                     id="{{ $questao['form']['evidencia']['id'] }}"
@@ -128,10 +128,10 @@
                   <div class="border rounded p-3 bg-light">
                     <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
                       <div>
-                        <label class="form-label small text-muted mb-1">Opcoes da resposta unica</label>
-                        <div class="form-text mt-0">Inclua as opcoes exibidas no select.</div>
+                        <label class="form-label small text-muted mb-1">Opções da resposta única</label>
+                        <div class="form-text mt-0">Inclua as opções exibidas no select.</div>
                       </div>
-                      <button type="button" class="btn btn-sm btn-outline-primary" data-add-resposta-unica-option>Adicionar opcao</button>
+                      <button type="button" class="btn btn-sm btn-outline-primary" data-add-resposta-unica-option>Adicionar opção</button>
                     </div>
                     <div class="d-flex flex-column gap-2" data-resposta-unica-options>
                       @foreach ($opcoesResposta as $opcao)
@@ -140,7 +140,7 @@
                             name="{{ $opcoesRespostaName }}"
                             class="form-control{{ $opcoesRespostaErro ? ' is-invalid' : '' }}"
                             value="{{ $opcao }}"
-                            placeholder="Digite uma opcao"
+                            placeholder="Digite uma opção"
                             data-resposta-unica-input
                             {{ ! empty($questao['form']['disabled']) ? 'disabled' : '' }}>
                           <button type="button" class="btn btn-outline-danger" data-remove-resposta-unica-option>Remover</button>
@@ -156,7 +156,7 @@
                       <input type="text"
                         name="{{ $opcoesRespostaName }}"
                         class="form-control"
-                        placeholder="Digite uma opcao"
+                        placeholder="Digite uma opção"
                         data-resposta-unica-input>
                       <button type="button" class="btn btn-outline-danger" data-remove-resposta-unica-option>Remover</button>
                     </div>
@@ -173,7 +173,7 @@
                   @case('escala')
                     @if (empty($questao['resposta']['escala_opcoes']))
                       <p class="text-muted small mb-0">
-                        Configure opcoes na escala associada antes de registrar respostas.
+                        Configure opções na escala associada antes de registrar respostas.
                       </p>
                     @else
                       <div class="d-flex flex-wrap gap-2">
@@ -205,7 +205,7 @@
 
                   @case('boolean')
                     <div class="d-flex gap-3">
-                      @foreach (['1' => 'Sim', '0' => 'Nao'] as $valorBooleano => $rotulo)
+                      @foreach (['1' => 'Sim', '0' => 'Não'] as $valorBooleano => $rotulo)
                         @php $inputId = 'questao-' . $questao['key'] . '-boolean-' . $valorBooleano; @endphp
                         <div class="form-check">
                           <input class="form-check-input"
@@ -224,7 +224,7 @@
                   @case('unica')
                     @if (empty($questao['resposta']['opcoes_resposta']))
                       <p class="text-muted small mb-0">
-                        Configure opcoes antes de registrar respostas.
+                        Configure opções antes de registrar respostas.
                       </p>
                     @else
                       <select class="form-select"
@@ -247,7 +247,7 @@
             @endif
           </div>
         @empty
-          <p class="text-muted mb-0">Nenhuma questao vinculada a este modelo.</p>
+          <p class="text-muted mb-0">Nenhuma questão vinculada a este modelo.</p>
         @endforelse
       </div>
     </div>
@@ -257,14 +257,14 @@
 <div class="card shadow-sm">
   <div class="card-header bg-white d-flex justify-content-between align-items-center">
     <div>
-      <h2 class="h6 fw-semibold mb-0">Questoes adicionais</h2>
-      <small class="text-muted">Personalize a avaliacao adicionando novas questoes especificas.</small>
+      <h2 class="h6 fw-semibold mb-0">Questões adicionais</h2>
+      <small class="text-muted">Personalize a avaliação adicionando novas questões específicas.</small>
     </div>
-    <button type="button" class="btn btn-outline-primary btn-sm" id="btn-add-questao-adicional">Adicionar questao</button>
+    <button type="button" class="btn btn-outline-primary btn-sm" id="btn-add-questao-adicional">Adicionar questão</button>
   </div>
   <div class="card-body">
     <div id="questoes-adicionais-container">
-      <p class="text-muted small mb-3 {{ ! empty($adicionaisData['empty']) ? '' : 'd-none' }}" data-adicional-empty>Nenhuma questao adicional adicionada.</p>
+      <p class="text-muted small mb-3 {{ ! empty($adicionaisData['empty']) ? '' : 'd-none' }}" data-adicional-empty>Nenhuma questão adicional adicionada.</p>
 
       @foreach ($adicionaisData['cards'] as $card)
         @php
@@ -278,7 +278,7 @@
             'tiposQuestao' => $optionMaps['tipos'] ?? [],
             'namePrefix' => 'questoes_adicionais',
             'errorPrefix' => 'questoes_adicionais',
-            'titlePrefix' => 'Questao adicional',
+            'titlePrefix' => 'Questão adicional',
             'scope' => 'adicional',
             'showFixaToggle' => false,
             'textoRequired' => false,
@@ -300,7 +300,7 @@
       'tiposQuestao' => $optionMaps['tipos'] ?? [],
       'namePrefix' => 'questoes_adicionais',
       'errorPrefix' => 'questoes_adicionais',
-      'titlePrefix' => 'Questao adicional',
+      'titlePrefix' => 'Questão adicional',
       'scope' => 'adicional',
       'showFixaToggle' => false,
       'textoRequired' => false,

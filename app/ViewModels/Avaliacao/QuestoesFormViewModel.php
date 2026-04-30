@@ -261,7 +261,7 @@ class QuestoesFormViewModel implements Arrayable
         $respostaAtual = $this->respostas[$questaoKey] ?? null;
 
         $tipoLabel = $this->tiposQuestao[$questao->tipo] ?? ucfirst((string) $questao->tipo);
-        $evidenciaLabel = optional($questao->evidencia)->descricao ?? 'Sem evidencia';
+        $evidenciaLabel = optional($questao->evidencia)->descricao ?? 'Sem evidência';
         $escalaLabel = $questao->escala && $questao->escala->descricao
             ? $questao->escala->descricao
             : ($questao->tipo === 'escala' ? 'Defina uma escala' : '---');
@@ -269,9 +269,9 @@ class QuestoesFormViewModel implements Arrayable
         return [
             'key' => $questaoKey,
             'card' => [
-                'label' => 'Questao ' . ($questao->ordem ?? ($index + 1)),
+                'label' => 'Questão ' . ($questao->ordem ?? ($index + 1)),
                 'badge' => [
-                    'label' => $questao->fixa ? 'Fixa' : 'Personalizavel',
+                    'label' => $questao->fixa ? 'Fixa' : 'Personalizável',
                     'class' => $questao->fixa
                         ? 'bg-light text-muted border'
                         : 'bg-primary-subtle text-primary border-primary',

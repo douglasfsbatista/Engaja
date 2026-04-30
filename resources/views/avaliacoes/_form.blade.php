@@ -132,7 +132,7 @@
                                       @endforeach
                                     </select>
                                   @else
-                                    <p class="text-muted small">Opcoes nao configuradas.</p>
+                                    <p class="text-muted small">Opções não configuradas.</p>
                                   @endif
                                   @break
 

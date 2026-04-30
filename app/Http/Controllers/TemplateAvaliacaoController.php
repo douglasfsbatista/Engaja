@@ -163,9 +163,9 @@ class TemplateAvaliacaoController extends Controller
         $tiposQuestao = [
             'texto'  => 'Texto aberto',
             'escala' => 'Escala',
-            'numero' => 'Numerica',
-            'boolean'=> 'Sim/Nao',
-            'unica'  => 'Resposta unica',
+            'numero' => 'Numérica',
+            'boolean'=> 'Sim/Não',
+            'unica'  => 'Resposta única',
         ];
 
         return compact('evidencias', 'escalas', 'tiposQuestao');
@@ -183,7 +183,7 @@ class TemplateAvaliacaoController extends Controller
 
         if ($questoesAtivas->isEmpty()) {
             throw ValidationException::withMessages([
-                'questoes' => 'Informe pelo menos uma questao para o template.',
+                'questoes' => 'Informe pelo menos uma questão para o template.',
             ]);
         }
 
@@ -218,19 +218,18 @@ class TemplateAvaliacaoController extends Controller
             );
 
             $validator->after(function ($validator) use ($questao) {
-                // Escala must be selected for 'escala' type
                 if (($questao['tipo'] ?? null) === 'escala' && empty($questao['escala_id'])) {
-                    $validator->errors()->add('escala_id', 'Selecione uma escala para questoes do tipo "Escala".');
+                    $validator->errors()->add('escala_id', 'Selecione uma escala para questões do tipo "Escala".');
                 }
 
                 if (($questao['tipo'] ?? null) === 'unica' && empty($this->normalizaOpcoesResposta($questao['opcoes_resposta'] ?? []))) {
-                    $validator->errors()->add('opcoes_resposta', 'Informe pelo menos uma opcao para questoes do tipo "Resposta unica".');
+                    $validator->errors()->add('opcoes_resposta', 'Informe pelo menos uma opção para questões do tipo "Resposta única".');
                 }
 
                 // If question is fixed, evidence selection becomes mandatory
                 $isFixa = ! empty($questao['fixa']);
                 if ($isFixa && empty($questao['evidencia_id'])) {
-                    $validator->errors()->add('evidencia_id', 'Selecione uma evidencia para questoes fixas.');
+                    $validator->errors()->add('evidencia_id', 'Selecione uma evidência para questões fixas.');
                 }
             });
 

@@ -520,11 +520,11 @@ class AvaliacaoController extends Controller
 
             $validator->after(function ($validator) use ($questao, $index) {
                 if (($questao['tipo'] ?? null) === 'escala' && empty($questao['escala_id'])) {
-                    $validator->errors()->add("questoes_adicionais.$index.escala_id", 'Selecione uma escala quando o tipo da questao for Escala.');
+                    $validator->errors()->add("questoes_adicionais.$index.escala_id", 'Selecione uma escala quando o tipo da questão for Escala.');
                 }
 
                 if (($questao['tipo'] ?? null) === 'unica' && empty($this->normalizaOpcoesResposta($questao['opcoes_resposta'] ?? []))) {
-                    $validator->errors()->add("questoes_adicionais.$index.opcoes_resposta", 'Informe pelo menos uma opcao para questoes do tipo "Resposta unica".');
+                    $validator->errors()->add("questoes_adicionais.$index.opcoes_resposta", 'Informe pelo menos uma opção para questões do tipo "Resposta única".');
                 }
             });
 
@@ -776,7 +776,7 @@ class AvaliacaoController extends Controller
 
             if ($tipo === 'escala' && ! $escalaId) {
                 throw ValidationException::withMessages([
-                    "questoes.{$questao->id}.escala_id" => 'Selecione uma escala quando o tipo da questao for Escala.',
+                    "questoes.{$questao->id}.escala_id" => 'Selecione uma escala quando o tipo da questão for Escala.',
                 ]);
             }
 
@@ -786,7 +786,7 @@ class AvaliacaoController extends Controller
 
             if ($tipo === 'unica' && empty($opcoesResposta)) {
                 throw ValidationException::withMessages([
-                    "questoes.{$questao->id}.opcoes_resposta" => 'Informe pelo menos uma opcao para questoes do tipo "Resposta unica".',
+                    "questoes.{$questao->id}.opcoes_resposta" => 'Informe pelo menos uma opção para questões do tipo "Resposta única".',
                 ]);
             }
 
@@ -828,9 +828,9 @@ class AvaliacaoController extends Controller
         return [
             'texto' => 'Texto aberto',
             'escala' => 'Escala',
-            'numero' => 'Numero',
-            'boolean' => 'Sim/Nao',
-            'unica' => 'Resposta unica',
+            'numero' => 'Número',
+            'boolean' => 'Sim/Não',
+            'unica' => 'Resposta única',
         ];
     }
 
