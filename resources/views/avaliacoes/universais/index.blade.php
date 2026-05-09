@@ -4,6 +4,7 @@
 <style>
   .avaliacoes-universais-actions-dropdown .dropdown-menu {
     position: fixed !important;
+    z-index: 1080;
   }
 </style>
 @endpush
@@ -95,7 +96,7 @@
           <td>{{ $avaliacao->created_at ? $avaliacao->created_at->format('d/m/Y H:i') : '—' }}</td>
           <td class="pe-3">
             <div class="dropdown avaliacoes-universais-actions-dropdown">
-              <button class="btn btn-sm btn-engaja dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+              <button class="btn btn-sm btn-engaja dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false">
                 Gerenciar
               </button>
               <ul class="dropdown-menu shadow-sm">
@@ -218,6 +219,49 @@
 @push('scripts')
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.avaliacoes-universais-actions-dropdown').forEach((dropdown) => {
+      const positionMenu = () => {
+        const button = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+        const menu = dropdown.querySelector('.dropdown-menu');
+
+        if (!button || !menu) {
+          return;
+        }
+
+        const buttonRect = button.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth || 180;
+        const menuHeight = menu.offsetHeight || menu.scrollHeight || 180;
+        const gap = 6;
+        const margin = 8;
+        const opensUp = buttonRect.bottom + gap + menuHeight > window.innerHeight - margin;
+        const top = opensUp
+          ? Math.max(margin, buttonRect.top - gap - menuHeight)
+          : Math.min(window.innerHeight - margin - menuHeight, buttonRect.bottom + gap);
+        const left = Math.min(
+          Math.max(margin, buttonRect.left),
+          window.innerWidth - margin - menuWidth
+        );
+
+        menu.style.position = 'fixed';
+        menu.style.inset = 'auto';
+        menu.style.transform = 'none';
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+        menu.style.zIndex = '1080';
+      };
+
+      dropdown.addEventListener('shown.bs.dropdown', positionMenu);
+      dropdown.addEventListener('hidden.bs.dropdown', () => {
+        const menu = dropdown.querySelector('.dropdown-menu');
+
+        if (!menu) {
+          return;
+        }
+
+        menu.removeAttribute('style');
+      });
+    });
+
     document.querySelectorAll('[data-copy-link]').forEach((button) => {
       button.addEventListener('click', async () => {
         const input = document.querySelector(button.dataset.copyLink);

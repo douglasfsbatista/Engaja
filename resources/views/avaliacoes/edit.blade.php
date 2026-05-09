@@ -6,6 +6,7 @@
   $formAction = $formAction ?? route('avaliacoes.update', $avaliacao);
   $cancelUrl = $cancelUrl ?? route('avaliacoes.index');
   $showUrl = $showUrl ?? route('avaliacoes.show', $avaliacao);
+  $bloquearEstrutura = $bloquearEstrutura ?? false;
 @endphp
 <div class="row justify-content-center">
   <div class="col-xl-10">
@@ -25,7 +26,7 @@
             <div class="col-md-6">
               <label for="atividade_id" class="form-label">Atividade</label>
               <select id="atividade_id" name="atividade_id"
-                class="form-select @error('atividade_id') is-invalid @enderror" required>
+                class="form-select @error('atividade_id') is-invalid @enderror" required @disabled($bloquearEstrutura)>
                 <option value="">Selecione...</option>
                 @foreach ($atividades as $atividade)
                 <option value="{{ $atividade->id }}"
@@ -34,6 +35,9 @@
                 </option>
                 @endforeach
               </select>
+              @if($bloquearEstrutura)
+              <input type="hidden" name="atividade_id" value="{{ $avaliacao->atividade_id }}">
+              @endif
               @error('atividade_id')
               <div class="invalid-feedback">{{ $message }}</div>
               @enderror
@@ -43,7 +47,7 @@
             <div class="col-md-6">
               <label for="template_avaliacao_id" class="form-label">Modelo de avaliação</label>
               <select id="template_avaliacao_id" name="template_avaliacao_id"
-                class="form-select @error('template_avaliacao_id') is-invalid @enderror" required>
+                class="form-select @error('template_avaliacao_id') is-invalid @enderror" required @disabled($bloquearEstrutura)>
                 <option value="">Selecione...</option>
                 @foreach ($templates as $template)
                 <option value="{{ $template->id }}"
@@ -52,6 +56,10 @@
                 </option>
                 @endforeach
               </select>
+              @if($bloquearEstrutura)
+              <input type="hidden" name="template_avaliacao_id" value="{{ $avaliacao->template_avaliacao_id }}">
+              <div class="form-text text-danger">Esta avaliação já possui respostas. Apenas a descrição pode ser alterada.</div>
+              @endif
               @error('template_avaliacao_id')
               <div class="invalid-feedback">{{ $message }}</div>
               @enderror
@@ -89,9 +97,15 @@
           </div>
 
           <div class="mt-4">
+            @if($bloquearEstrutura)
+            <fieldset disabled>
+            @endif
             @include('avaliacoes._questoes', [
         'questoesForm' => $questoesForm,
             ])
+            @if($bloquearEstrutura)
+            </fieldset>
+            @endif
           </div>
 
           <div class="d-flex justify-content-between mt-4">

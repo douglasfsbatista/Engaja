@@ -6,7 +6,7 @@
 @endphp
 
 <div class="row justify-content-center">
-  <div class="col-lg-7 col-xl-6">
+  <div class="col-lg-7 col-xl-4">
     <div class="card shadow-sm border-0 text-center my-5">
       <div class="card-body p-5">
         <img src="{{ asset('images/engaja-bg.png') }}" alt="Engaja" class="mb-4" style="max-width: 150px;">
@@ -16,9 +16,9 @@
           <span class="fw-bold" style="font-size: 2rem;">✓</span>
         </div>
 
-        <h1 class="h3 fw-bold text-engaja mb-3">Avaliação respondida com sucesso</h1>
+        <h1 class="h3 fw-bold text-engaja mb-3">Suas respostas foram registradas com sucesso</h1>
         <p class="text-muted mb-4">
-          Obrigado por contribuir com a avaliação <strong>{{ $titulo }}</strong>. Suas respostas foram registradas.
+          As informações compartilhadas serão tratadas em conformidade com a Lei Geral de Proteção de Dados - LGPD.
         </p>
 
         <a href="{{ url('/') }}" class="btn btn-outline-secondary">

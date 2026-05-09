@@ -20,7 +20,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\MessageBag;
 use Illuminate\Support\Str;
+use Illuminate\Support\ViewErrorBag;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -231,7 +233,7 @@ class AvaliacaoController extends Controller
             $escalas->keyBy('id'),
             [],
             false,
-            $request->session()->get('errors'),
+            $this->validationErrors($request),
             $oldInput
         )->toArray();
 
@@ -277,7 +279,7 @@ class AvaliacaoController extends Controller
             $escalas->keyBy('id'),
             [],
             false,
-            $request->session()->get('errors'),
+            $this->validationErrors($request),
             $oldInput
         )->toArray();
 
@@ -374,27 +376,7 @@ class AvaliacaoController extends Controller
     public function show(Avaliacao $avaliacao)
     {
         $avaliacao->load([
-            'inscricao.participante.user',
-            'inscricao.evento',
             'atividade.evento',
-            'templateAvaliacao',
-            'respostas.avaliacaoQuestao',
-            'avaliacaoQuestoes.indicador.dimensao',
-            'avaliacaoQuestoes.evidencia',
-            'avaliacaoQuestoes.escala',
-        ]);
-
-        return view('avaliacoes.show', [
-            'avaliacao' => $avaliacao,
-            'tiposQuestao' => $this->tiposQuestao(),
-        ]);
-    }
-
-    public function universaisShow(Avaliacao $avaliacao)
-    {
-        abort_unless($avaliacao->atividade_id === null, 404);
-
-        $avaliacao->load([
             'templateAvaliacao',
             'avaliacaoQuestoes.indicador.dimensao',
             'avaliacaoQuestoes.evidencia',
@@ -403,16 +385,23 @@ class AvaliacaoController extends Controller
 
         return view('avaliacoes._form', [
             'avaliacao' => $avaliacao,
-            'atividade' => null,
+            'atividade' => $avaliacao->atividade,
             'tiposQuestao' => $this->tiposQuestao(),
             'inscricaoRespondente' => null,
             'token' => '',
             'respostasExistentes' => collect(),
             'jaRespondeu' => false,
-            'isUniversal' => true,
+            'isUniversal' => false,
             'formularioFechado' => false,
             'somenteVisualizacao' => true,
         ]);
+    }
+
+    public function universaisShow(Avaliacao $avaliacao)
+    {
+        abort_unless($avaliacao->atividade_id === null, 404);
+
+        return $this->show($avaliacao);
     }
 
     public function edit(Request $request, Avaliacao $avaliacao)
@@ -496,7 +485,7 @@ class AvaliacaoController extends Controller
             $escalas->keyBy('id'),
             [],
             false,
-            $request->session()->get('errors'),
+            $this->validationErrors($request),
             $oldInput
         )->toArray();
 
@@ -507,6 +496,7 @@ class AvaliacaoController extends Controller
             'templateSelecionado' => $avaliacao->templateAvaliacao,
             'selectedTemplateId' => $selectedTemplateId,
             'questoesForm' => $questoesForm,
+            'bloquearEstrutura' => $avaliacao->respostas()->exists(),
         ]);
     }
 
@@ -580,7 +570,7 @@ class AvaliacaoController extends Controller
             $escalas->keyBy('id'),
             [],
             false,
-            $request->session()->get('errors'),
+            $this->validationErrors($request),
             $oldInput
         )->toArray();
 
@@ -595,6 +585,7 @@ class AvaliacaoController extends Controller
             'formAction' => route('avaliacoes-universais.update', $avaliacao),
             'cancelUrl' => route('avaliacoes-universais.index'),
             'showUrl' => route('avaliacoes-universais.show', $avaliacao),
+            'bloquearEstrutura' => $avaliacao->respostas()->exists(),
         ]);
     }
 
@@ -635,7 +626,7 @@ class AvaliacaoController extends Controller
 
         $jaTemRespostas = $avaliacao->respostas()->exists();
 
-        $templateAlterado = $avaliacao->template_avaliacao_id !== $dados['template_avaliacao_id'];
+        $templateAlterado = (int) $avaliacao->template_avaliacao_id !== (int) $dados['template_avaliacao_id'];
         $tentouAlterarQuestoes = $templateAlterado
             || ! empty($customizacoes)
             || ($questoesAdicionais && $questoesAdicionais->isNotEmpty())
@@ -698,7 +689,24 @@ class AvaliacaoController extends Controller
         [$questoesAdicionais, $questoesAdicionaisRemovidas] = $this->processaQuestoesAdicionais($request, $avaliacao);
 
         $jaTemRespostas = $avaliacao->respostas()->exists();
-        $templateAlterado = $avaliacao->template_avaliacao_id !== $dados['template_avaliacao_id'];
+        $templateAlterado = (int) $avaliacao->template_avaliacao_id !== (int) $dados['template_avaliacao_id'];
+
+        if ($jaTemRespostas) {
+            if ($templateAlterado) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['template_avaliacao_id' => 'Esta avaliação já possui respostas. Não é possível alterar modelo ou questões.']);
+            }
+
+            $avaliacao->update([
+                'descricao_universal' => $dados['descricao_universal'] ?? null,
+            ]);
+
+            return redirect()
+                ->route('avaliacoes-universais.index')
+                ->with('success', 'Descrição da avaliação universal atualizada com sucesso!');
+        }
+
         $tentouAlterarQuestoes = $templateAlterado
             || ! empty($customizacoes)
             || ($questoesAdicionais && $questoesAdicionais->isNotEmpty())
@@ -1001,6 +1009,17 @@ class AvaliacaoController extends Controller
         }
 
         return $resultado;
+    }
+
+    private function validationErrors(Request $request): ?MessageBag
+    {
+        $errors = $request->session()->get('errors');
+
+        if ($errors instanceof ViewErrorBag) {
+            return $errors->getBag('default');
+        }
+
+        return $errors instanceof MessageBag ? $errors : null;
     }
 
     private function validateAvaliacaoUniversal(Request $request): array
