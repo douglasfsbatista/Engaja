@@ -114,6 +114,20 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('questaos', QuestaoController::class);
         Route::resource('templates-avaliacao', TemplateAvaliacaoController::class)
             ->parameters(['templates-avaliacao' => 'template']);
+        Route::prefix('avaliacoes-universais')
+            ->name('avaliacoes-universais.')
+            ->controller(AvaliacaoController::class)
+            ->group(function () {
+                Route::get('/', 'universaisIndex')->name('index');
+                Route::get('/create', 'universaisCreate')->name('create');
+                Route::post('/', 'universaisStore')->name('store');
+                Route::get('/{avaliacao}', 'universaisShow')->name('show');
+                Route::get('/{avaliacao}/edit', 'universaisEdit')->name('edit');
+                Route::put('/{avaliacao}', 'universaisUpdate')->name('update');
+                Route::delete('/{avaliacao}', 'universaisDestroy')->name('destroy');
+                Route::patch('/{avaliacao}/status-formulario', 'universaisToggleFormulario')->name('toggle-formulario');
+                Route::get('/{avaliacao}/link-qrcode', 'universaisLinkQrCode')->name('link-qrcode');
+            });
         Route::resource('avaliacoes', AvaliacaoController::class)
             ->parameters(['avaliacoes' => 'avaliacao']);
         Route::get('avaliacoes/{avaliacao}/respostas', [AvaliacaoController::class, 'respostas'])->name('avaliacoes.respostas');
@@ -280,6 +294,7 @@ Route::middleware(['auth', 'role:administrador|gerente'])->group(function () {
 
 Route::get('/formulario-avaliacao/{avaliacao}', [AvaliacaoController::class, 'formularioAvaliacao'])->name('avaliacao.formulario');
 Route::post('/formulario-avaliacao/{avaliacao}', [AvaliacaoController::class, 'responderFormulario'])->name('avaliacao.formulario.responder');
+Route::get('/formulario-avaliacao/{avaliacao}/obrigado', [AvaliacaoController::class, 'formularioAvaliacaoObrigado'])->name('avaliacao.formulario.obrigado');
 Route::get('/validacao/{codigo}', [CertificadoController::class, 'validar'])->name('certificados.validacao');
 
 require __DIR__.'/auth.php';
