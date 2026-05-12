@@ -11,11 +11,11 @@ $engaja-salmon: #F5B6A3;
 $engaja-dark:   #1F1F1F;
 
 $font-family-sans-serif: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif !default;
-$primary:       $engaja-teal;  
+$primary:       $engaja-teal;
 $secondary:     $engaja-salmon;
-$success:       #2EB57D;        
+$success:       #2EB57D;
 $warning:       $engaja-orange;
-$danger:        $engaja-red;    
+$danger:        $engaja-red;
 $info:          $engaja-teal;
 
 $body-color:    $engaja-dark;
@@ -51,9 +51,9 @@ $theme-colors: map-merge(
 }
 
 :root {
-  --engaja-purple: #{$engaja-purple};
-  --engaja-blue:   #{$engaja-blue};
-  --engaja-yellow: #{$engaja-yellow};
-  --engaja-pink:   #{$engaja-pink};
-  --engaja-green:  #{$engaja-green};
+  --engaja-teal: #{$engaja-teal};
+  --engaja-orange:   #{$engaja-orange};
+  --engaja-red: #{$engaja-red};
+  --engaja-salmon:   #{$engaja-salmon};
+  --engaja-dark:  #{$engaja-dark};
 }
