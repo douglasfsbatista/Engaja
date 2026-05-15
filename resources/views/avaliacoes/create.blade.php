@@ -10,9 +10,7 @@
 <div class="row justify-content-center">
   <div class="col-xl-10">
     <h1 class="h3 fw-bold text-engaja mb-4">
-      @if($transcricao)
-        Nova transcrição de avaliação
-      @elseif($universal)
+      @if($universal)
         Nova avaliação universal
       @else
         Nova avaliação
@@ -28,7 +26,7 @@
 
             @unless($universal)
             <div class="col-md-6">
-              <label for="atividade_id" class="form-label">{{ $transcricao ? 'Momento' : 'Atividade' }}</label>
+              <label for="atividade_id" class="form-label">Atividade</label>
               <select id="atividade_id" name="atividade_id"
                 class="form-select @error('atividade_id') is-invalid @enderror" required>
                 <option value="">Selecione...</option>
@@ -71,7 +69,7 @@
               @enderror
             </div>
 
-            @if(!$universal && !$transcricao)
+            @if(!$universal)
             <div class="col-md-6 d-flex align-items-center">
               <div class="form-check mt-4">
                 <input class="form-check-input" type="checkbox" value="1" id="anonima" name="anonima"
@@ -85,11 +83,7 @@
             @else
             <div class="col-md-6 d-flex align-items-center">
               <div class="form-text mt-4">
-                @if($transcricao)
-                  Transcrições são anônimas e não exigem presença.
-                @else
-                  Avaliações universais são sempre anônimas e não ficam vinculadas a um momento.
-                @endif
+                Avaliações universais são sempre anônimas e não ficam vinculadas a um momento.
               </div>
             </div>
             @endif

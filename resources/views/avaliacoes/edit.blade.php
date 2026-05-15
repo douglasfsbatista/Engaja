@@ -13,9 +13,7 @@
   <div class="col-xl-10">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="h3 fw-bold text-engaja mb-0">
-        @if($transcricao)
-          Editar transcrição de avaliação
-        @elseif($universal)
+        @if($universal)
           Editar avaliação universal
         @else
           Editar avaliação
@@ -33,7 +31,7 @@
           <div class="row g-3">
             @unless($universal)
             <div class="col-md-6">
-              <label for="atividade_id" class="form-label">{{ $transcricao ? 'Momento' : 'Atividade' }}</label>
+              <label for="atividade_id" class="form-label">Atividade</label>
               <select id="atividade_id" name="atividade_id"
                 class="form-select @error('atividade_id') is-invalid @enderror" required @disabled($bloquearEstrutura)>
                 <option value="">Selecione...</option>
@@ -85,7 +83,7 @@
               @enderror
             </div>
 
-            @if(!$universal && !$transcricao)
+            @if(!$universal)
             <div class="col-md-6 d-flex align-items-center">
               <div class="form-check mt-4">
                 <input class="form-check-input" type="checkbox" value="1" id="anonima" disabled
@@ -101,11 +99,7 @@
             @else
             <div class="col-md-6 d-flex align-items-center">
               <div class="form-text mt-4">
-                @if($transcricao)
-                  Transcrições são anônimas e não exigem presença.
-                @else
-                  Avaliações universais são sempre anônimas e não ficam vinculadas a um momento.
-                @endif
+                Avaliações universais são sempre anônimas e não ficam vinculadas a um momento.
               </div>
             </div>
             @endif

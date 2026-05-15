@@ -114,6 +114,9 @@
                   <a href="{{ route('avaliacoes.show', $avaliacao) }}" class="dropdown-item">Ver</a>
                 </li>
                 <li>
+                  <a href="{{ route('avaliacoes.transcricao', $avaliacao) }}" class="dropdown-item">Transcrição</a>
+                </li>
+                <li>
                   <a href="{{ route('avaliacoes.ficha-pdf', $avaliacao) }}" class="dropdown-item">Baixar ficha para preenchimento à mão (PDF)</a>
                 </li>
                 <li>

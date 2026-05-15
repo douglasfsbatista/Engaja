@@ -128,20 +128,12 @@ Route::middleware(['auth'])->group(function () {
                 Route::patch('/{avaliacao}/status-formulario', 'universaisToggleFormulario')->name('toggle-formulario');
                 Route::get('/{avaliacao}/link-qrcode', 'universaisLinkQrCode')->name('link-qrcode');
             });
-        Route::prefix('avaliacoes-transcricoes')
-            ->name('avaliacoes-transcricoes.')
-            ->controller(AvaliacaoController::class)
-            ->group(function () {
-                Route::get('/', 'transcricoesIndex')->name('index');
-                Route::get('/create', 'transcricoesCreate')->name('create');
-                Route::post('/', 'transcricoesStore')->name('store');
-                Route::get('/{avaliacao}', 'transcricoesShow')->name('show');
-                Route::get('/{avaliacao}/edit', 'transcricoesEdit')->name('edit');
-                Route::put('/{avaliacao}', 'transcricoesUpdate')->name('update');
-                Route::delete('/{avaliacao}', 'transcricoesDestroy')->name('destroy');
-            });
         Route::resource('avaliacoes', AvaliacaoController::class)
             ->parameters(['avaliacoes' => 'avaliacao']);
+        Route::get('avaliacoes/{avaliacao}/transcricao', [AvaliacaoController::class, 'transcricao'])->name('avaliacoes.transcricao');
+        Route::post('avaliacoes/{avaliacao}/transcricao', [AvaliacaoController::class, 'transcricaoBusca'])->name('avaliacoes.transcricao.busca');
+        Route::post('avaliacoes/{avaliacao}/transcricao/cadastrar', [AvaliacaoController::class, 'transcricaoCadastrar'])->name('avaliacoes.transcricao.cadastrar');
+        Route::get('avaliacoes-usuarios/sugestoes', [AvaliacaoController::class, 'usuariosSugestao'])->name('avaliacoes.usuarios.sugestoes');
         Route::get('avaliacoes/{avaliacao}/respostas', [AvaliacaoController::class, 'respostas'])->name('avaliacoes.respostas');
         Route::get('avaliacoes/{avaliacao}/respostas/{submissao}', [AvaliacaoController::class, 'respostasMostrar'])->name('avaliacoes.respostas.mostrar');
         Route::get('avaliacoes/{avaliacao}/ficha-pdf', [AvaliacaoController::class, 'downloadFichaPdf'])->name('avaliacoes.ficha-pdf');

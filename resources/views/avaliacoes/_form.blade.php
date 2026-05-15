@@ -3,7 +3,7 @@
 @section('content')
 @php
   $isUniversal = $isUniversal ?? false;
-  $isTranscricao = $isTranscricao ?? false;
+  $isTranscricao = ($isTranscricao ?? false) || request('transcricao');
   $tituloAvaliacao = $isUniversal
       ? ($avaliacao->descricao_universal ?: ($avaliacao->templateAvaliacao->nome ?? 'Avaliação universal'))
       : ($atividade?->descricao ?? $avaliacao->templateAvaliacao->nome ?? 'Avaliação');
@@ -69,6 +69,9 @@
         <form method="POST" action="{{ route('avaliacao.formulario.responder', $avaliacao) }}">
           @csrf
           <input type="hidden" name="token" value="{{ old('token', $token) }}">
+          @if(request('transcricao') || ($isTranscricao ?? false))
+            <input type="hidden" name="transcricao" value="1">
+          @endif
 
           <fieldset @disabled($formBloqueado || $somenteVisualizacao)>
             @php
