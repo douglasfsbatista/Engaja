@@ -15,6 +15,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
 
 class AtividadeController extends Controller
@@ -444,6 +445,27 @@ class AtividadeController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
+    }
+
+    public function downloadListaPresencaSimplesView(Atividade $atividade)
+    {
+        $this->authorize('presenca.abrir');
+
+        $inscricoes = $atividade->inscricoes()->with([
+            'participante.user',
+            'participante.municipio.estado',
+        ])->get()->sortBy(function ($inscricao) {
+            return Str::ascii(mb_strtolower($inscricao->participante->user->name ?? ''));
+        })->values();
+
+        $pdf = Pdf::loadView('pdf.lista-presenca-simples', [
+            'atividade'  => $atividade,
+            'inscricoes' => $inscricoes,
+        ])->setPaper('a4', 'portrait');
+
+        $fileName = 'Lista_Presenca_' . Str::slug($atividade->descricao) . '.pdf';
+
+        return $pdf->download($fileName);
     }
 
     public function downloadListaAutorizacaoImagemPdf(Atividade $atividade)

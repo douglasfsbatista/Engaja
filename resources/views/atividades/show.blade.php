@@ -151,7 +151,12 @@
         @can('presenca.abrir')
             {{-- Lista de presenças --}}
             <div class="mb-4">
-                <h2 class="h6 fw-bold mb-2">Participantes com presença registrada</h2>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="h6 fw-bold mb-0">Participantes com presença registrada</h2>
+                    <a href="{{ route('atividades.lista-presenca-simples.pdf', $atividade) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-download me-1"></i>Baixar lista (PDF)
+                    </a>
+                </div>
 
                 @php
                     $lista = $atividade->presencas()->with([
