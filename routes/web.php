@@ -133,8 +133,13 @@ Route::middleware(['auth'])->group(function () {
             });
         Route::resource('avaliacoes', AvaliacaoController::class)
             ->parameters(['avaliacoes' => 'avaliacao']);
+        Route::get('avaliacoes/{avaliacao}/transcricao', [AvaliacaoController::class, 'transcricao'])->name('avaliacoes.transcricao');
+        Route::post('avaliacoes/{avaliacao}/transcricao', [AvaliacaoController::class, 'transcricaoBusca'])->name('avaliacoes.transcricao.busca');
+        Route::post('avaliacoes/{avaliacao}/transcricao/cadastrar', [AvaliacaoController::class, 'transcricaoCadastrar'])->name('avaliacoes.transcricao.cadastrar');
+        Route::get('avaliacoes-usuarios/sugestoes', [AvaliacaoController::class, 'usuariosSugestao'])->name('avaliacoes.usuarios.sugestoes');
         Route::get('avaliacoes/{avaliacao}/respostas', [AvaliacaoController::class, 'respostas'])->name('avaliacoes.respostas');
         Route::get('avaliacoes/{avaliacao}/respostas/{submissao}', [AvaliacaoController::class, 'respostasMostrar'])->name('avaliacoes.respostas.mostrar');
+        Route::get('avaliacoes/{avaliacao}/ficha-pdf', [AvaliacaoController::class, 'downloadFichaPdf'])->name('avaliacoes.ficha-pdf');
         Route::get('atividades/{atividade}/avaliacoes', [AvaliacaoController::class, 'resultadosAtividade'])->name('atividades.avaliacoes');
         Route::get('atividades/{atividade}/avaliacoes/pdf', [AvaliacaoController::class, 'downloadResultadosPdf'])->name('atividades.avaliacoes.pdf');
     });

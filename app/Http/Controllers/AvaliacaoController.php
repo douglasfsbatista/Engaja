@@ -7,11 +7,14 @@ use App\Models\Avaliacao;
 use App\Models\AvaliacaoQuestao;
 use App\Models\Escala;
 use App\Models\Evidencia;
+use App\Models\Inscricao;
+use App\Models\Participante;
 use App\Models\Presenca;
 use App\Models\Questao;
 use App\Models\RespostaAvaliacao;
 use App\Models\SubmissaoAvaliacao;
 use App\Models\TemplateAvaliacao;
+use App\Models\User;
 use App\Services\AvaliacaoRespostasDashboardService;
 use App\ViewModels\Avaliacao\QuestoesFormViewModel;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -19,6 +22,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\MessageBag;
 use Illuminate\Support\Str;
@@ -383,6 +387,9 @@ class AvaliacaoController extends Controller
             'avaliacaoQuestoes.escala',
         ]);
 
+        $isUniversal = $avaliacao->atividade_id === null;
+        $isTranscricao = $avaliacao->transcricao;
+
         return view('avaliacoes._form', [
             'avaliacao' => $avaliacao,
             'atividade' => $avaliacao->atividade,
@@ -391,7 +398,8 @@ class AvaliacaoController extends Controller
             'token' => '',
             'respostasExistentes' => collect(),
             'jaRespondeu' => false,
-            'isUniversal' => false,
+            'isUniversal' => $isUniversal,
+            'isTranscricao' => $isTranscricao,
             'formularioFechado' => false,
             'somenteVisualizacao' => true,
         ]);
@@ -1002,6 +1010,7 @@ class AvaliacaoController extends Controller
             'atividade_id' => $dados['atividade_id'],
             'template_avaliacao_id' => $dados['template_avaliacao_id'],
             'descricao_universal' => $dados['descricao_universal'] ?? null,
+            'transcricao' => false,
         ];
 
         if (! $avaliacaoId) {
@@ -1036,6 +1045,7 @@ class AvaliacaoController extends Controller
             'template_avaliacao_id' => $dados['template_avaliacao_id'],
             'descricao_universal' => $dados['descricao_universal'] ?? null,
             'anonima' => true,
+            'transcricao' => false,
         ];
     }
 
@@ -1211,6 +1221,250 @@ class AvaliacaoController extends Controller
         return $sincronizadas;
     }
 
+    public function transcricao(Avaliacao $avaliacao)
+    {
+        if ($avaliacao->anonima) {
+            return redirect()->route('avaliacao.formulario', ['avaliacao' => $avaliacao, 'transcricao' => 1]);
+        }
+
+        return view('avaliacoes.transcricao_busca', compact('avaliacao'));
+    }
+
+    public function transcricaoBusca(Request $request, Avaliacao $avaliacao)
+    {
+        $search = trim((string) $request->input('search'));
+        $type = $request->input('type', 'nome');
+
+        if (empty($search)) {
+            return back()->with('error', 'Informe um valor para buscar.')->withInput();
+        }
+
+        $query = User::query()->with(['participante', 'roles']);
+
+        if ($type === 'cpf') {
+            $cpf = preg_replace('/\D/', '', $search);
+            $query->whereHas('participante', function ($q) use ($cpf) {
+                $q->whereRaw("regexp_replace(coalesce(cpf, ''), '[^0-9]', '', 'g') = ?", [$cpf]);
+            });
+        } elseif ($type === 'email') {
+            $query->where('email', $search);
+        } else {
+            // nome
+            $query->where('name', 'ilike', "%{$search}%");
+        }
+
+        $usuarios = $query->get();
+
+        if ($usuarios->isEmpty()) {
+            return back()->with('error', 'Usuário não encontrado.')->withInput();
+        }
+
+        if ($usuarios->count() > 1) {
+            $msg = "Foram encontrados {$usuarios->count()} usuários com este " . ($type === 'nome' ? 'nome' : $type) . ".";
+            if ($type === 'nome') {
+                $msg .= " Sugerimos buscar por CPF ou E-mail para maior precisão.";
+            }
+
+            return view('avaliacoes.transcricao_busca', [
+                'avaliacao' => $avaliacao,
+                'usuarios' => $usuarios,
+                'duplicados' => true,
+                'mensagem' => $msg,
+                'search' => $search,
+                'type' => $type,
+            ]);
+        }
+
+        $user = $usuarios->first();
+        $participante = $user->participante;
+
+        if (!$participante) {
+            return back()->with('error', 'Este usuário não possui perfil de participante completo.')->withInput();
+        }
+
+        $atividade = $avaliacao->atividade;
+        if (!$atividade) {
+            return back()->with('error', 'Esta avaliação não possui um momento (atividade) vinculado.')->withInput();
+        }
+
+        $evento = $atividade->evento;
+
+        // Lógica de inscrição e presença (baseada no PresencaController)
+        $inscricao = Inscricao::withTrashed()
+            ->where('participante_id', $participante->id)
+            ->where('atividade_id', $atividade->id)
+            ->first();
+
+        if (!$inscricao) {
+            $inscricao = Inscricao::withTrashed()
+                ->where('participante_id', $participante->id)
+                ->where('evento_id', $evento->id)
+                ->whereNull('atividade_id')
+                ->first();
+        }
+
+        if ($inscricao) {
+            $inscricao->fill([
+                'evento_id'       => $evento->id,
+                'atividade_id'    => $atividade->id,
+                'participante_id' => $participante->id,
+            ]);
+            $inscricao->deleted_at = null;
+            $inscricao->save();
+        } else {
+            $inscricao = Inscricao::create([
+                'evento_id'       => $evento->id,
+                'atividade_id'    => $atividade->id,
+                'participante_id' => $participante->id,
+                'ouvinte'         => true,
+            ]);
+        }
+
+        $presenca = $atividade->presencas()->updateOrCreate(
+            ['inscricao_id' => $inscricao->id],
+            ['status' => 'presente']
+        );
+
+        if (is_null($presenca->avaliacao_respondida)) {
+            $presenca->avaliacao_respondida = false;
+            $presenca->save();
+        }
+
+        return redirect()->route('avaliacao.formulario', [
+            'avaliacao' => $avaliacao->id,
+            'token' => encrypt($presenca->id),
+            'transcricao' => 1
+        ]);
+    }
+
+    public function transcricaoCadastrar(Request $request, Avaliacao $avaliacao)
+    {
+        $cpfDigits = preg_replace('/\D+/', '', (string) $request->input('cpf'));
+        $payload = [
+            'name' => isset($request->name) ? trim((string) $request->name) : null,
+            'email' => isset($request->email) ? trim((string) $request->email) : null,
+            'cpf' => $cpfDigits !== '' ? $cpfDigits : null,
+        ];
+
+        $validator = Validator::make($payload, [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'cpf' => ['nullable', 'digits:11'],
+        ]);
+
+        $validator->after(function ($v) use ($payload) {
+            $cpf = $payload['cpf'] ?? null;
+            if ($cpf) {
+                if (! $this->isValidCpf($cpf)) {
+                    $v->errors()->add('cpf', 'CPF invalido.');
+                    return;
+                }
+
+                $duplicado = Participante::query()
+                    ->whereNotNull('cpf')
+                    ->whereRaw("regexp_replace(cpf, '[^0-9]', '', 'g') = ?", [$cpf])
+                    ->exists();
+
+                if ($duplicado) {
+                    $v->errors()->add('cpf', 'Este CPF ja possui cadastro no sistema.');
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        $validated = $validator->validated();
+
+        $user = DB::transaction(function () use ($validated) {
+            $email = strtolower(trim($validated['email']));
+            $name = trim($validated['name'] ?? '');
+            $cpf = $validated['cpf'] ?? null;
+
+            $user = User::firstOrCreate(
+                ['email' => $email],
+                [
+                    'name' => $name !== '' ? $name : ($cpf ?? 'Participante'),
+                    'password' => Hash::make(Str::random(12)),
+                ]
+            );
+
+            Participante::updateOrCreate(
+                ['user_id' => $user->id],
+                ['cpf' => $cpf]
+            );
+
+            return $user;
+        });
+
+        // Agora procede como se tivesse encontrado o usuário na busca
+        $participante = $user->participante;
+        $atividade = $avaliacao->atividade;
+        $evento = $atividade->evento;
+
+        $inscricao = Inscricao::create([
+            'evento_id'       => $evento->id,
+            'atividade_id'    => $atividade->id,
+            'participante_id' => $participante->id,
+            'ouvinte'         => true,
+        ]);
+
+        $presenca = $atividade->presencas()->create([
+            'inscricao_id' => $inscricao->id,
+            'status' => 'presente',
+            'avaliacao_respondida' => false,
+        ]);
+
+        return redirect()->route('avaliacao.formulario', [
+            'avaliacao' => $avaliacao->id,
+            'token' => encrypt($presenca->id),
+            'transcricao' => 1
+        ]);
+    }
+
+    public function usuariosSugestao(Request $request)
+    {
+        $term = $request->query('q');
+        if (empty($term)) {
+            return response()->json([]);
+        }
+
+        $sugestoes = User::where('name', 'ilike', "%{$term}%")
+            ->orderBy('name')
+            ->limit(10)
+            ->pluck('name');
+
+        return response()->json($sugestoes);
+    }
+
+    private function isValidCpf(string $cpf): bool
+    {
+        $cpf = preg_replace('/\D+/', '', $cpf ?? '');
+        if (strlen($cpf) !== 11) {
+            return false;
+        }
+        if (preg_match('/^(\d)\1{10}$/', $cpf)) {
+            return false;
+        }
+
+        $sum = 0;
+        for ($i = 0, $w = 10; $i < 9; $i++, $w--) {
+            $sum += (int) $cpf[$i] * $w;
+        }
+        $r = $sum % 11;
+        $dv1 = ($r < 2) ? 0 : 11 - $r;
+
+        $sum = 0;
+        for ($i = 0, $w = 11; $i < 10; $i++, $w--) {
+            $sum += (int) $cpf[$i] * $w;
+        }
+        $r = $sum % 11;
+        $dv2 = ($r < 2) ? 0 : 11 - $r;
+
+        return ($cpf[9] == $dv1) && ($cpf[10] == $dv2);
+    }
+
     public function tiposQuestao(): array
     {
         return [
@@ -1266,10 +1520,12 @@ class AvaliacaoController extends Controller
 
         $token = $request->query('token', $request->input('token'));
         $isUniversal = $avaliacao->atividade_id === null;
-        $presencaRespondente = $isUniversal ? null : $this->resolverPresencaPorToken($token, $avaliacao);
+        $isTranscricao = $avaliacao->transcricao;
+        $exigePresenca = ! $isUniversal && ! $isTranscricao;
+        $presencaRespondente = $exigePresenca ? $this->resolverPresencaPorToken($token, $avaliacao) : null;
         $inscricaoRespondente = $presencaRespondente?->inscricao;
         $formularioFechado = $isUniversal && ! $avaliacao->formulario_aberto;
-        $formBloqueado = $formularioFechado || ($isUniversal ? false : ($presencaRespondente?->avaliacao_respondida ?? false));
+        $formBloqueado = $formularioFechado || ($exigePresenca ? ($presencaRespondente?->avaliacao_respondida ?? false) : false);
         $respostasExistentes = collect();
 
         return view('avaliacoes._form', [
@@ -1281,6 +1537,7 @@ class AvaliacaoController extends Controller
             'respostasExistentes' => $respostasExistentes,
             'jaRespondeu' => $formBloqueado,
             'isUniversal' => $isUniversal,
+            'isTranscricao' => $isTranscricao,
             'formularioFechado' => $formularioFechado,
         ]);
     }
@@ -1289,9 +1546,11 @@ class AvaliacaoController extends Controller
     {
         $avaliacao->load(['avaliacaoQuestoes.escala', 'atividade']);
         $isUniversal = $avaliacao->atividade_id === null;
+        $isTranscricao = $avaliacao->transcricao;
+        $exigePresenca = ! $isUniversal && ! $isTranscricao;
 
         $token = $request->input('token', $request->query('token'));
-        $presenca = $isUniversal ? null : $this->resolverPresencaPorToken($token, $avaliacao);
+        $presenca = $exigePresenca ? $this->resolverPresencaPorToken($token, $avaliacao) : null;
 
         if ($isUniversal && ! $avaliacao->formulario_aberto) {
             return redirect()
@@ -1299,19 +1558,19 @@ class AvaliacaoController extends Controller
                 ->withErrors(['avaliacao' => 'Este formulário não está recebendo respostas no momento.']);
         }
 
-        if (! $isUniversal && ! $presenca) {
+        if ($exigePresenca && ! $presenca) {
             return redirect()
                 ->route('avaliacao.formulario', ['avaliacao' => $avaliacao->id, 'token' => $token])
                 ->withErrors(['token' => 'Nao encontramos sua inscricao para esta avaliacao. Confirme a presenca novamente.']);
         }
 
-        if (! $isUniversal && $presenca->avaliacao_respondida) {
+        if ($exigePresenca && $presenca->avaliacao_respondida) {
             return redirect()
                 ->route('avaliacao.formulario', ['avaliacao' => $avaliacao->id, 'token' => $token])
                 ->withErrors(['avaliacao' => 'Voce ja respondeu este formulario.']);
         }
 
-        if (! $isUniversal && ! $avaliacao->anonima) {
+        if ($exigePresenca && ! $avaliacao->anonima) {
             $jaEnviou = SubmissaoAvaliacao::where('avaliacao_id', $avaliacao->id)
                 ->where('presenca_id', $presenca->id)
                 ->exists();
@@ -1340,12 +1599,12 @@ class AvaliacaoController extends Controller
         $dados = $request->validate($rules);
         $respostas = $dados['respostas'] ?? [];
 
-        DB::transaction(function () use ($avaliacao, $presenca, $respostas, $isUniversal) {
+        DB::transaction(function () use ($avaliacao, $presenca, $respostas, $isUniversal, $exigePresenca) {
             $submissao = SubmissaoAvaliacao::create([
                 'codigo' => (string) Str::ulid(),
                 'atividade_id' => $avaliacao->atividade_id,
                 'avaliacao_id' => $avaliacao->id,
-                'presenca_id' => $isUniversal || $avaliacao->anonima ? null : $presenca->id,
+                'presenca_id' => $isUniversal || $avaliacao->anonima || ! $exigePresenca ? null : $presenca->id,
                 'universal' => $isUniversal,
             ]);
 
@@ -1364,7 +1623,7 @@ class AvaliacaoController extends Controller
                 ]);
             }
 
-            if (! $isUniversal && $presenca) {
+            if ($exigePresenca && $presenca) {
                 $presenca->avaliacao_respondida = true;
                 $presenca->save();
             }
@@ -1373,6 +1632,12 @@ class AvaliacaoController extends Controller
         if ($isUniversal) {
             return redirect()
                 ->route('avaliacao.formulario.obrigado', $avaliacao);
+        }
+
+        if ($request->input('transcricao')) {
+            return redirect()
+                ->route('avaliacoes.index')
+                ->with('success', 'Resposta de transcrição registrada com sucesso!');
         }
 
         return redirect()
@@ -1441,7 +1706,8 @@ class AvaliacaoController extends Controller
     public function respostas(Avaliacao $avaliacao)
     {
         $isUniversal = $avaliacao->atividade_id === null;
-        abort_if($avaliacao->anonima && ! $isUniversal, 404);
+        $isTranscricao = $avaliacao->transcricao;
+        abort_if($avaliacao->anonima && ! $isUniversal && ! $isTranscricao, 404);
 
         $avaliacao->load(['atividade.evento', 'templateAvaliacao']);
 
@@ -1459,7 +1725,8 @@ class AvaliacaoController extends Controller
     public function respostasMostrar(Avaliacao $avaliacao, SubmissaoAvaliacao $submissao)
     {
         $isUniversal = $avaliacao->atividade_id === null;
-        abort_if($avaliacao->anonima && ! $isUniversal, 404);
+        $isTranscricao = $avaliacao->transcricao;
+        abort_if($avaliacao->anonima && ! $isUniversal && ! $isTranscricao, 404);
         abort_unless($submissao->avaliacao_id === $avaliacao->id, 404);
 
         $submissao->load([
@@ -1557,6 +1824,26 @@ class AvaliacaoController extends Controller
             'totais' => $payload['totais'],
             'perguntas' => $payload['perguntas'],
             'geradoEm' => now(),
+        ]);
+
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->download($fileName);
+    }
+
+    public function downloadFichaPdf(Avaliacao $avaliacao)
+    {
+        $avaliacao->load([
+            'templateAvaliacao',
+            'atividade.evento',
+            'avaliacaoQuestoes.escala',
+            'avaliacaoQuestoes.indicador.dimensao',
+        ]);
+
+        $fileName = 'ficha-avaliacao-'.$avaliacao->id.'-'.now()->format('Ymd_His').'.pdf';
+
+        $pdf = Pdf::loadView('avaliacoes.ficha_pdf', [
+            'avaliacao' => $avaliacao,
         ]);
 
         $pdf->setPaper('a4', 'portrait');
