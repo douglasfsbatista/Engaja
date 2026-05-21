@@ -1,4 +1,4 @@
-@extends('layouts.pdf-alfa-eja')
+@extends('layouts.pdf-alfa-eja-landscape')
 
 @section('title', 'Relatório de Participação e Avaliação por Encontro')
 
@@ -27,6 +27,47 @@
 
 @section('content')
 <h2>Relatório de Participação e Avaliação por Encontro</h2>
+
+{{-- Filtros Aplicados --}}
+@php
+    $filtrosAplicados = [];
+    if (request('evento_id')) {
+        $evento = \App\Models\Evento::find(request('evento_id'));
+        if ($evento) $filtrosAplicados[] = "Ação: " . $evento->nome;
+    }
+    if (request('regiao_id')) {
+        $regiao = \App\Models\Regiao::find(request('regiao_id'));
+        if ($regiao) $filtrosAplicados[] = "Região: " . $regiao->nome;
+    }
+    if (request('municipio_id')) {
+        $municipio = \App\Models\Municipio::find(request('municipio_id'));
+        if ($municipio) $filtrosAplicados[] = "Município: " . $municipio->nome;
+    }
+    if (request('descricao')) {
+        $filtrosAplicados[] = "Momento: " . request('descricao');
+    }
+    if (request('de') || request('ate')) {
+        $de = request('de') ? \Carbon\Carbon::parse(request('de'))->format('d/m/Y') : '';
+        $ate = request('ate') ? \Carbon\Carbon::parse(request('ate'))->format('d/m/Y') : '';
+        $intervalo = ($de && $ate) ? "$de até $ate" : ($de ? "a partir de $de" : "até $ate");
+        $filtrosAplicados[] = "Período: " . $intervalo;
+    }
+    if (request('periodo')) {
+        $periodos = ['manha' => 'Manhã', 'tarde' => 'Tarde', 'noite' => 'Noite'];
+        $filtrosAplicados[] = "Período do dia: " . ($periodos[request('periodo')] ?? request('periodo'));
+    }
+@endphp
+
+@if(count($filtrosAplicados) > 0)
+<div style="margin-bottom: 15px; padding: 10px; background-color: #f9f9f9; border-left: 3px solid #421944;">
+    <p style="margin: 0; font-size: 11px; color: #555; font-weight: bold;">Filtros Aplicados:</p>
+    <ul style="margin: 5px 0 0 20px; font-size: 10px; color: #666;">
+        @foreach($filtrosAplicados as $filtro)
+            <li>{{ $filtro }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
 
 @if($atividades->isEmpty())
     <p style="text-align: center; color: #666;">Nenhum encontro encontrado com os filtros aplicados.</p>

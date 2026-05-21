@@ -5,15 +5,88 @@ namespace App\Exports;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use App\Models\Atividade;
+use App\Models\Evento;
+use App\Models\Regiao;
+use App\Models\Municipio;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\BeforeSheet;
 
-class RelatorioMomentoExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize
+class RelatorioMomentoExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithEvents
 {
     public function __construct(private Request $request)
     {
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            BeforeSheet::class => function(BeforeSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+
+                $filtros = $this->getFiltersSummary();
+                $row = 1;
+
+                if (count($filtros) > 0) {
+                    $sheet->setCellValue('A' . $row, 'Filtros Aplicados:');
+                    $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+                    $row++;
+
+                    foreach ($filtros as $filtro) {
+                        $sheet->setCellValue('A' . $row, $filtro);
+                        $row++;
+                    }
+
+                    // Adicionar linha em branco
+                    $row++;
+
+                    // Inserir 3 linhas vazias antes dos dados
+                    $sheet->insertNewRowBefore($row, 3);
+                }
+            }
+        ];
+    }
+
+    private function getFiltersSummary(): array
+    {
+        $filtros = [];
+
+        if ($this->request->integer('evento_id')) {
+            $evento = Evento::find($this->request->integer('evento_id'));
+            if ($evento) $filtros[] = "Ação: " . $evento->nome;
+        }
+
+        if ($this->request->integer('regiao_id')) {
+            $regiao = Regiao::find($this->request->integer('regiao_id'));
+            if ($regiao) $filtros[] = "Região: " . $regiao->nome;
+        }
+
+        if ($this->request->integer('municipio_id')) {
+            $municipio = Municipio::find($this->request->integer('municipio_id'));
+            if ($municipio) $filtros[] = "Município: " . $municipio->nome;
+        }
+
+        if (trim((string) $this->request->get('descricao', ''))) {
+            $filtros[] = "Momento: " . $this->request->get('descricao');
+        }
+
+        if ($this->request->get('de') || $this->request->get('ate')) {
+            $de = $this->request->get('de') ? \Carbon\Carbon::parse($this->request->get('de'))->format('d/m/Y') : '';
+            $ate = $this->request->get('ate') ? \Carbon\Carbon::parse($this->request->get('ate'))->format('d/m/Y') : '';
+            $intervalo = ($de && $ate) ? "$de até $ate" : ($de ? "a partir de $de" : "até $ate");
+            $filtros[] = "Período: " . $intervalo;
+        }
+
+        if ($this->request->get('periodo')) {
+            $periodos = ['manha' => 'Manhã', 'tarde' => 'Tarde', 'noite' => 'Noite'];
+            $periodo_label = $periodos[$this->request->get('periodo')] ?? $this->request->get('periodo');
+            $filtros[] = "Período do dia: " . $periodo_label;
+        }
+
+        return $filtros;
     }
 
     public function collection(): Collection

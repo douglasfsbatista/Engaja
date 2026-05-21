@@ -96,12 +96,6 @@ class RelatorioQuantitativoController extends Controller
 
         $municipios = Municipio::query()
             ->with('estado:id,sigla')
-            ->whereIn('id',
-                Atividade::query()
-                    ->whereNotNull('municipio_id')
-                    ->distinct()
-                    ->pluck('municipio_id')
-            )
             ->orderBy('nome')
             ->get();
 
@@ -188,7 +182,7 @@ class RelatorioQuantitativoController extends Controller
             $comCpf = $cpfCounts->get($municipioId)?->com_cpf ?? 0;
             $semCpf = $cpfCounts->get($municipioId)?->sem_cpf ?? 0;
             $total = $comCpf + $semCpf;
-            $pctCpf = $total > 0 ? round($comCpf / $total * 100, 1) : 0;
+            $pctCpf = $total > 0 ? round($comCpf / $total * 100, 2) : 0;
 
             $rows[] = [
                 'municipio_id' => $municipioId,
@@ -216,7 +210,7 @@ class RelatorioQuantitativoController extends Controller
 
         if ($prevNull > 0 || $comCpfNull > 0 || $semCpfNull > 0) {
             $totalNull = $comCpfNull + $semCpfNull;
-            $pctCpfNull = $totalNull > 0 ? round($comCpfNull / $totalNull * 100, 1) : 0;
+            $pctCpfNull = $totalNull > 0 ? round($comCpfNull / $totalNull * 100, 2) : 0;
 
             $rows[] = [
                 'municipio_id' => null,
@@ -287,7 +281,7 @@ class RelatorioQuantitativoController extends Controller
 
         // Linha de total
         $totalCpf = $totais['com_cpf'] + $totais['sem_cpf'];
-        $pctTotal = $totalCpf > 0 ? round($totais['com_cpf'] / $totalCpf * 100, 1) : 0;
+        $pctTotal = $totalCpf > 0 ? round($totais['com_cpf'] / $totalCpf * 100, 2) : 0;
 
         $rows[] = [
             'municipio_id' => 'total',
@@ -343,9 +337,29 @@ class RelatorioQuantitativoController extends Controller
 
         if ($formato === 'pdf') {
             $atividades = $this->getAtividadesData($request);
-            return Pdf::loadView('relatorio-quantitativo.pdf-momento', compact('atividades'))
+            $headerPath = public_path('images/Alfa-Eja Header.png');
+            $footerPath = public_path('images/Alfa-Eja Footer.png');
+
+            $options = [
+                'margin-top' => 35,
+                'margin-right' => 10,
+                'margin-bottom' => 25,
+                'margin-left' => 10,
+            ];
+
+            $pdf = Pdf::loadView('relatorio-quantitativo.pdf-momento', compact('atividades'))
                 ->setPaper('a4', 'landscape')
-                ->download('relatorio-momento-' . now()->format('Ymd_His') . '.pdf');
+                ->setOptions($options);
+
+            if (file_exists($headerPath)) {
+                $pdf->setOption('header-html', view('relatorio-quantitativo.pdf-header')->render());
+            }
+
+            if (file_exists($footerPath)) {
+                $pdf->setOption('footer-html', view('relatorio-quantitativo.pdf-footer')->render());
+            }
+
+            return $pdf->download('relatorio-momento-' . now()->format('Ymd_His') . '.pdf');
         }
 
         return Excel::download(
@@ -360,9 +374,29 @@ class RelatorioQuantitativoController extends Controller
 
         if ($formato === 'pdf') {
             $totalGeral = $this->buildTotalGeralData($request);
-            return Pdf::loadView('relatorio-quantitativo.pdf-total-geral', compact('totalGeral'))
+            $headerPath = public_path('images/Alfa-Eja Header.png');
+            $footerPath = public_path('images/Alfa-Eja Footer.png');
+
+            $options = [
+                'margin-top' => 35,
+                'margin-right' => 10,
+                'margin-bottom' => 25,
+                'margin-left' => 10,
+            ];
+
+            $pdf = Pdf::loadView('relatorio-quantitativo.pdf-total-geral', compact('totalGeral'))
                 ->setPaper('a4', 'landscape')
-                ->download('relatorio-total-geral-' . now()->format('Ymd_His') . '.pdf');
+                ->setOptions($options);
+
+            if (file_exists($headerPath)) {
+                $pdf->setOption('header-html', view('relatorio-quantitativo.pdf-header')->render());
+            }
+
+            if (file_exists($footerPath)) {
+                $pdf->setOption('footer-html', view('relatorio-quantitativo.pdf-footer')->render());
+            }
+
+            return $pdf->download('relatorio-total-geral-' . now()->format('Ymd_His') . '.pdf');
         }
 
         return Excel::download(
