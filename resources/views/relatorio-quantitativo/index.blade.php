@@ -26,6 +26,16 @@
                 </div>
 
                 <div class="col-md-3 col-lg-2">
+                    <label class="form-label mb-1 small fw-semibold">Região</label>
+                    <select name="regiao_id" id="filter-regiao" class="form-select form-select-sm">
+                        <option value="">Todas</option>
+                        @foreach($regioes as $regiao)
+                            <option value="{{ $regiao->id }}" @selected(request('regiao_id') == $regiao->id)>{{ $regiao->nome }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-3 col-lg-2">
                     <label class="form-label mb-1 small fw-semibold">Momento</label>
                     <select name="descricao" id="filter-momento" class="form-select form-select-sm">
                         <option value="">Todos</option>
@@ -78,7 +88,22 @@
         </div>
     </div>
 
-    {{-- Tabela --}}
+    {{-- Abas --}}
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link @if($tab === 'momento') active @endif" href="{{ route('relatorio-quantitativo.index') }}?{{ http_build_query(array_merge(request()->query(), ['tab' => 'momento'])) }}" role="tab">
+                Relatório por Momento
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link @if($tab === 'total-geral') active @endif" href="{{ route('relatorio-quantitativo.index') }}?{{ http_build_query(array_merge(request()->query(), ['tab' => 'total-geral'])) }}" role="tab">
+                Total Geral de Participantes
+            </a>
+        </li>
+    </ul>
+
+    {{-- Tabela Momento --}}
+    @if($tab === 'momento')
     <div class="card shadow-sm">
         <div class="card-body p-0">
             @php
@@ -171,6 +196,79 @@
             @endif
         </div>
     </div>
+    @endif
+
+    {{-- Tabela Total Geral --}}
+    @if($tab === 'total-geral')
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            @php
+                function tg_sort_link(string $label, string $key): string {
+                    $curr   = request('sort', 'regiao');
+                    $curDir = request('dir', 'asc') === 'asc' ? 'asc' : 'desc';
+                    $next   = ($curr === $key && $curDir === 'asc') ? 'desc' : 'asc';
+                    $params = array_merge(request()->except('page'), ['sort' => $key, 'dir' => $next]);
+                    $url    = request()->url() . '?' . http_build_query($params);
+                    $arrow  = ($curr === $key) ? ($curDir === 'asc' ? ' ↑' : ' ↓') : '';
+                    return '<a href="' . e($url) . '" class="text-decoration-none text-dark">'
+                         . e($label)
+                         . '<span class="text-muted small">' . $arrow . '</span></a>';
+                }
+            @endphp
+
+            @if($totalGeral->filter(fn($r) => !isset($r['_is_total']))->isEmpty())
+                <div class="p-4 text-center text-muted">Nenhum dado encontrado com os filtros aplicados.</div>
+            @else
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{!! tg_sort_link('Região', 'regiao') !!}</th>
+                            <th>{!! tg_sort_link('Município', 'municipio') !!}</th>
+                            <th class="text-end">{!! tg_sort_link('Previstos', 'previstos') !!}</th>
+                            <th class="text-end">{!! tg_sort_link('Com CPF', 'com_cpf') !!}</th>
+                            <th class="text-end">{!! tg_sort_link('Sem CPF', 'sem_cpf') !!}</th>
+                            <th class="text-end">{!! tg_sort_link('% Com CPF', 'pct_cpf') !!}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($totalGeral as $row)
+                            @if(isset($row['_is_total']) || isset($row['_is_unidentified']))
+                                @if(isset($row['_is_unidentified']))
+                                <tr style="background-color:#f8f5f0;">
+                                    <td colspan="2">{{ $row['municipio_nome'] }}</td>
+                                    <td class="text-end">{{ $row['previstos'] ?: '—' }}</td>
+                                    <td class="text-end">{{ $row['metricas']['cpf']['com'] }}</td>
+                                    <td class="text-end">{{ $row['metricas']['cpf']['sem'] }}</td>
+                                    <td class="text-end">{{ ($row['metricas']['cpf']['com'] + $row['metricas']['cpf']['sem']) > 0 ? $row['metricas']['cpf']['pct'] . '%' : '—' }}</td>
+                                </tr>
+                                @else
+                                <tr style="background-color:#e8daea; font-weight:700;">
+                                    <td colspan="2" class="text-end pe-3">{{ $row['municipio_nome'] }}</td>
+                                    <td class="text-end">{{ $row['previstos'] ?: '—' }}</td>
+                                    <td class="text-end">{{ $row['metricas']['cpf']['com'] }}</td>
+                                    <td class="text-end">{{ $row['metricas']['cpf']['sem'] }}</td>
+                                    <td class="text-end">{{ ($row['metricas']['cpf']['com'] + $row['metricas']['cpf']['sem']) > 0 ? $row['metricas']['cpf']['pct'] . '%' : '—' }}</td>
+                                </tr>
+                                @endif
+                            @else
+                            <tr>
+                                <td>{{ $row['regiao'] }}</td>
+                                <td>{{ $row['municipio_nome'] }}</td>
+                                <td class="text-end">{{ $row['previstos'] ?: '—' }}</td>
+                                <td class="text-end">{{ $row['metricas']['cpf']['com'] }}</td>
+                                <td class="text-end">{{ $row['metricas']['cpf']['sem'] }}</td>
+                                <td class="text-end">{{ ($row['metricas']['cpf']['com'] + $row['metricas']['cpf']['sem']) > 0 ? $row['metricas']['cpf']['pct'] . '%' : '—' }}</td>
+                            </tr>
+                            @endif
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @endif
+        </div>
+    </div>
+    @endif
 
 </div>
 
