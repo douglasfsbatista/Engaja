@@ -11,12 +11,12 @@
     "axios": "^1.11.0",
     "bootstrap": "^5.3.8",
     "laravel-vite-plugin": "^2.0.0",
-    "playwright": "^1.60.0",
     "sass": "^1.71.1",
     "vite": "^7.0.4"
   },
   "dependencies": {
     "apexcharts": "^5.3.6",
-    "fabric": "^6.9.0"
+    "fabric": "^6.9.0",
+    "puppeteer": "^25.0.4"
   }
 }

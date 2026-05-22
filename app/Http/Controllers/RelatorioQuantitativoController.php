@@ -463,4 +463,5 @@ class RelatorioQuantitativoController extends Controller
 
         return $query->get();
     }
+
 }
