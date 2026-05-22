@@ -15,7 +15,6 @@ use App\Models\Participante;
 use App\Models\Presenca;
 use App\Models\SituacaoDesafiadora;
 use App\Models\User;
-use App\Services\AvaliacaoConsolidacaoService;
 use App\Support\CargaHoraria;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -152,16 +151,6 @@ class EventoController extends Controller
         }
 
         return view('eventos.show', compact('evento', 'atividades', 'presencasPorAtividade'));
-    }
-
-    public function avaliacoesConsolidadas(Request $request, Evento $evento, AvaliacaoConsolidacaoService $service)
-    {
-        $this->authorize('update', $evento);
-
-        $agrupamento = $request->get('agrupamento', 'geral');
-        $grupos = $service->build($evento, $agrupamento);
-
-        return view('eventos.avaliacoes-consolidadas', compact('evento', 'agrupamento', 'grupos'));
     }
 
     public function relatorios(Request $request, Evento $evento)
