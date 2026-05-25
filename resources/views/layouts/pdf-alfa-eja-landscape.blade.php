@@ -9,6 +9,10 @@
             font-size: 12px;
             margin: 0;
             padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 150mm;
         }
         table {
             width: 100%;

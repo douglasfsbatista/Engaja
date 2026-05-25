@@ -203,6 +203,8 @@ O macro define as margens do Puppeteer e os templates de header/footer com as im
 
 7. **Cache de views.** Ao modificar layouts PDF rodar `php artisan view:clear`.
 
+8. **Alturas em CSS não herdam a altura da página.** No navegador, `min-height: 100%` funciona porque a viewport tem altura definida. Em Puppeteer, a página size não é exposta ao CSS. Para centrar verticalmente, usar `height: XXmm` explícito baseado nas margens. Exemplo para A4 landscape com margens 35 10 25 10: altura disponível = 210mm - 35mm (top) - 25mm (bottom) = 150mm.
+
 ===
 
 <laravel-boost-guidelines>
