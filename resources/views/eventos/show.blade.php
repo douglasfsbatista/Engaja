@@ -145,7 +145,7 @@
   <div class="row g-4 align-items-center mb-4">
     <div class="col-md-5">
       <div class="ev-card bg-light p-4 text-center">
-        <img src="{{ $evento->imagem ? asset('storage/' . $evento->imagem) : asset('images/ppt-banner.png') }}"
+        <img src="{{ $evento->imagem ? asset('storage/' . $evento->imagem) : asset('images/logo-aeb.png') }}"
           class="img-fluid rounded" alt="Capa do evento">
       </div>
     </div>
@@ -233,6 +233,11 @@
 
               @role('administrador|gerente|eq_pedagogica|articulador')
                 <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item" href="{{ route('eventos.avaliacoes.consolidado', $evento) }}">
+                    Consolidação de avaliações
+                  </a>
+                </li>
                 <li>
                   <button type="button" class="dropdown-item" data-bs-toggle="modal"
                     data-bs-target="#modalRelatoriosEvento">
