@@ -36,16 +36,31 @@ class UserManagementController extends Controller
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('q', ''));
+        $searchCpf = preg_replace('/\D+/', '', $search) ?: '';
         $regiaoId = $request->query('regiao');
         $estadoId = $request->query('estado');
         $municipioId = $request->query('municipio');
 
-        $users = User::with(['roles', 'participante.municipio.estado.regiao'])
-            ->whereDoesntHave('roles', fn($q) => $q->whereIn('name', self::PROTECTED_ROLES))
-            ->when($search !== '', function ($q) use ($search) {
+        $users = User::with([
+            'roles',
+            'participante.municipio.estado.regiao',
+            'participante.inscricoes.evento',
+            'participante.inscricoes.atividade.evento',
+            'participante.inscricoes.presencas.atividade.evento',
+        ])
+            ->when(!auth()->user()->hasRole('administrador'), function ($q) {
+                //nao sendo administrador, oculta os administradores
+                $q->whereDoesntHave('roles', fn($sub) => $sub->whereIn('name', self::PROTECTED_ROLES));
+            })
+            ->when($search !== '', function ($q) use ($search, $searchCpf) {
                 $q->where(function ($sub) use ($search) {
                     $sub->where('name', 'ilike', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->when($searchCpf !== '', function ($sub) use ($searchCpf) {
+                    $sub->orWhereHas('participante', function ($participanteQuery) use ($searchCpf) {
+                        $participanteQuery->whereRaw("regexp_replace(coalesce(cpf, ''), '[^0-9]', '', 'g') like ?", ["%{$searchCpf}%"]);
+                    });
                 });
             })
             ->when($municipioId, function ($q) use ($municipioId) {
@@ -156,7 +171,7 @@ class UserManagementController extends Controller
     {
         abort_unless(auth()->user()?->can('user.editar'), 403);
 
-        if ($this->isProtected($managedUser)) {
+        if ($this->isProtected($managedUser) && !auth()->user()->hasRole('administrador')) {
             return redirect()
                 ->route('usuarios.index')
                 ->with('error', 'Este usuario nao pode ser editado.');
@@ -186,7 +201,7 @@ class UserManagementController extends Controller
     {
         abort_unless(auth()->user()?->can('user.editar'), 403);
 
-        if ($this->isProtected($managedUser)) {
+        if ($this->isProtected($managedUser) && !auth()->user()->hasRole('administrador')) {
             return redirect()
                 ->route('usuarios.index')
                 ->with('error', 'Este usuario nao pode ser editado.');

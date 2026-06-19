@@ -1,5 +1,13 @@
 ﻿@extends('layouts.app')
 
+@push('styles')
+<style>
+  .usuarios-actions-dropdown .dropdown-menu {
+    position: fixed !important;
+  }
+</style>
+@endpush
+
 @section('content')
 <div class="mb-4">
     <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
@@ -29,7 +37,7 @@
                     <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
                   </svg>
               </span>
-                    <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Buscar nome ou e-mail..." value="{{ $search }}">
+                    <input type="text" name="q" class="form-control border-start-0 ps-0" placeholder="Buscar nome, e-mail ou CPF..." value="{{ $search }}">
                 </div>
             </div>
 
@@ -128,19 +136,38 @@
                   <td>{{ $cpfFmt }}</td>
                   <td>{{ $telFmt }}</td>
                   <td class="text-end pe-4">
-                    <a href="{{ route('usuarios.edit', $u) }}" class="btn btn-sm btn-engaja">
-                      Editar
-                    </a>
-                    @role('administrador')
-                      <button type="button"
-                              class="btn btn-sm btn-outline-secondary js-reset-password"
-                              data-bs-toggle="modal"
-                              data-bs-target="#modalRedefinirSenha"
-                              data-action="{{ route('usuarios.password.reset', $u) }}"
-                              data-user-name="{{ $u->name }}">
-                        Redefinir senha
+                    <div class="dropdown d-inline-block usuarios-actions-dropdown">
+                      <button class="btn btn-sm btn-engaja dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport" aria-expanded="false">
+                        Gerenciar
                       </button>
-                    @endrole
+                      <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        @hasanyrole('administrador|gerente')
+                          <li>
+                            <button type="button"
+                                    class="dropdown-item"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalParticipacoesUsuario{{ $u->id }}">
+                              Ver participações
+                            </button>
+                          </li>
+                        @endhasanyrole
+                        <li>
+                          <a href="{{ route('usuarios.edit', $u) }}" class="dropdown-item">Editar</a>
+                        </li>
+                        @role('administrador')
+                          <li>
+                            <button type="button"
+                                    class="dropdown-item js-reset-password"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalRedefinirSenha"
+                                    data-action="{{ route('usuarios.password.reset', $u) }}"
+                                    data-user-name="{{ $u->name }}">
+                              Redefinir senha
+                            </button>
+                          </li>
+                        @endrole
+                      </ul>
+                    </div>
                   </td>
                 </tr>
               @endforeach
@@ -148,25 +175,205 @@
           </table>
         </div>
       </div>
-        {{--
-        <div class="card-footer bg-white d-flex justify-content-between align-items-center">
-          <div class="text-muted small">Selecione participantes e clique em Emitir certificados.</div>
-          {{ $users->links() }}
-        </div>
-        --}}
-      </div>
-
+        @if($users->hasPages())
+            <div class="card-footer bg-white d-flex justify-content-center overflow-auto py-3 border-top-0">
+                <div class="m-0">
+                    {{ $users->links() }}
+                </div>
+            </div>
+        @endif
+    </div>
 
       <div class="mt-3 text-end d-flex flex-wrap justify-content-end gap-2">
-      {{--
-      @hasanyrole('administrador|gerente')
-        <button type="button" class="btn btn-outline-secondary" id="btn-select-all-page">Selecionar todos da página</button>
-        <button type="button" class="btn btn-outline-secondary" id="btn-select-all-global">Selecionar todos (todas as páginas)</button>
-        <button type="button" class="btn btn-engaja" id="btn-open-modal">Emitir certificados</button>
-      @endhasanyrole
-      --}}
-    </div>
+          {{--
+          @hasanyrole('administrador|gerente')
+            <button type="button" class="btn btn-outline-secondary" id="btn-select-all-page">Selecionar todos da página</button>
+            <button type="button" class="btn btn-outline-secondary" id="btn-select-all-global">Selecionar todos (todas as páginas)</button>
+            <button type="button" class="btn btn-engaja" id="btn-open-modal">Emitir certificados</button>
+          @endhasanyrole
+          --}}
+      </div>
   </form>
+
+  @hasanyrole('administrador|gerente')
+  @foreach ($users as $u)
+    @php
+      $participante = $u->participante;
+      $todasInscricoes = $participante?->inscricoes ?? collect();
+      $participacoes = collect();
+
+      foreach ($todasInscricoes as $inscricao) {
+        $atividadeInscricao = $inscricao->atividade;
+        $eventoInscricao = $inscricao->evento ?? $atividadeInscricao?->evento;
+        $temPresencaEmMomentoValido = $inscricao->presencas->contains(function ($presenca) use ($inscricao) {
+          $atividadePresenca = $presenca->atividade;
+          $eventoPresenca = $atividadePresenca?->evento ?? $inscricao->evento;
+
+          return $atividadePresenca && $eventoPresenca;
+        });
+
+        if ($eventoInscricao && ($atividadeInscricao || ! $temPresencaEmMomentoValido)) {
+          $presencaDaInscricao = $inscricao->presencas
+            ->first(fn ($item) => (int) $item->atividade_id === (int) ($inscricao->atividade_id ?? 0));
+
+          $participacoes->push([
+            'key' => 'inscricao-' . $inscricao->id,
+            'evento' => $eventoInscricao,
+            'atividade' => $atividadeInscricao,
+            'inscricao' => $inscricao,
+            'presenca' => $presencaDaInscricao,
+            'ouvinte' => (bool) $inscricao->ouvinte,
+          ]);
+        }
+
+        foreach ($inscricao->presencas as $presenca) {
+          $atividadePresenca = $presenca->atividade;
+          $eventoPresenca = $atividadePresenca?->evento ?? $inscricao->evento;
+
+          if (! $eventoPresenca || ($presenca->atividade_id && ! $atividadePresenca)) {
+            continue;
+          }
+
+          if ($inscricao->atividade_id && (int) $presenca->atividade_id === (int) $inscricao->atividade_id) {
+            continue;
+          }
+
+          $participacoes->push([
+            'key' => 'presenca-' . $presenca->id,
+            'evento' => $eventoPresenca,
+            'atividade' => $atividadePresenca,
+            'inscricao' => $inscricao,
+            'presenca' => $presenca,
+            'ouvinte' => (bool) $inscricao->ouvinte,
+          ]);
+        }
+      }
+
+      $participacoes = $participacoes
+        ->unique('key')
+        ->sortBy([
+          fn ($a, $b) => strcmp((string) ($a['evento']->nome ?? ''), (string) ($b['evento']->nome ?? '')),
+          fn ($a, $b) => strcmp((string) ($a['atividade']->dia ?? ''), (string) ($b['atividade']->dia ?? '')),
+          fn ($a, $b) => strcmp((string) ($a['atividade']->hora_inicio ?? ''), (string) ($b['atividade']->hora_inicio ?? '')),
+        ])
+        ->values();
+
+      $primeiraInscricao = $todasInscricoes->sortBy('created_at')->first();
+      $dataInscricaoSistema = $u->created_at
+        ?? $participante?->created_at
+        ?? $primeiraInscricao?->created_at;
+    @endphp
+
+    <div class="modal fade" id="modalParticipacoesUsuario{{ $u->id }}" tabindex="-1" aria-labelledby="modalParticipacoesUsuario{{ $u->id }}Label" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <h5 class="modal-title fw-bold" id="modalParticipacoesUsuario{{ $u->id }}Label">Participações de {{ $u->name }}</h5>
+              <div class="text-muted small">{{ $u->email }}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row g-3 mb-4">
+              <div class="col-12 col-md-4">
+                <div class="border rounded p-3 h-100 bg-light">
+                  <div class="text-muted small">Data de inscrição no sistema</div>
+                  <div class="fw-semibold">
+                    {{ $dataInscricaoSistema ? $dataInscricaoSistema->format('d/m/Y H:i') : 'Não informada' }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-12 col-md-4">
+                <div class="border rounded p-3 h-100 bg-light">
+                  <div class="text-muted small">Total de participações</div>
+                  <div class="fw-semibold">{{ $participacoes->count() }}</div>
+                </div>
+              </div>
+              <div class="col-12 col-md-4">
+                <div class="border rounded p-3 h-100 bg-light">
+                  <div class="text-muted small">Participações como ouvinte</div>
+                  <div class="fw-semibold">{{ $participacoes->where('ouvinte', true)->count() }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm align-middle table-bordered mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="min-width: 220px;">Ação pedagógica</th>
+                    <th style="min-width: 220px;">Momento</th>
+                    <th style="min-width: 140px;">Data do momento</th>
+                    <th style="min-width: 150px;">Inscrição no momento</th>
+                    <th style="min-width: 130px;">Status de presença</th>
+                    <th style="min-width: 100px;">Ouvinte</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @forelse($participacoes as $participacao)
+                    @php
+                      $evento = $participacao['evento'];
+                      $atividade = $participacao['atividade'];
+                      $inscricao = $participacao['inscricao'];
+                      $presenca = $participacao['presenca'];
+                      $statusPresenca = $presenca?->status;
+                      $statusLabel = match ($statusPresenca) {
+                        'presente' => 'Presente',
+                        'justificado' => 'Justificado',
+                        'ausente' => 'Ausente',
+                        default => 'Sem presença',
+                      };
+                      $momentoData = $atividade?->dia
+                        ? \Illuminate\Support\Carbon::parse($atividade->dia)->format('d/m/Y')
+                        : null;
+                      $horaInicio = $atividade?->hora_inicio
+                        ? \Illuminate\Support\Carbon::parse($atividade->hora_inicio)->format('H:i')
+                        : null;
+                      $horaFim = $atividade?->hora_fim
+                        ? \Illuminate\Support\Carbon::parse($atividade->hora_fim)->format('H:i')
+                        : null;
+                    @endphp
+                    <tr>
+                      <td>{{ $evento->nome ?? '-' }}</td>
+                      <td>{{ $atividade->descricao ?? '-' }}</td>
+                      <td>
+                        {{ $momentoData ?? '-' }}
+                        @if($horaInicio || $horaFim)
+                          <div class="text-muted small">{{ $horaInicio ?? '--:--' }} às {{ $horaFim ?? '--:--' }}</div>
+                        @endif
+                      </td>
+                      <td>{{ $inscricao->created_at ? $inscricao->created_at->format('d/m/Y H:i') : '-' }}</td>
+                      <td>
+                        <span class="badge {{ $statusPresenca === 'presente' ? 'bg-success' : ($statusPresenca === 'justificado' ? 'bg-warning text-dark' : 'bg-secondary') }}">
+                          {{ $statusLabel }}
+                        </span>
+                      </td>
+                      <td>
+                        @if($inscricao->ouvinte)
+                          <span class="badge bg-info">Sim</span>
+                        @else
+                          <span class="badge bg-light text-dark border">Não</span>
+                        @endif
+                      </td>
+                    </tr>
+                  @empty
+                    <tr>
+                      <td colspan="6" class="text-center text-muted py-4">Nenhuma participação encontrada para este usuário.</td>
+                    </tr>
+                  @endforelse
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  @endforeach
+  @endhasanyrole
 
   <input type="hidden" name="select_all_pages" id="select_all_pages_hidden" form="form-emitir-certificados" value="">
 

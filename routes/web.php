@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\AutorizacaoImagemImportController;
-use App\Http\Controllers\AvaliacaoController;
 use App\Http\Controllers\AgendamentoController;
 use App\Http\Controllers\AgendamentoEfetivacaoController;
 use App\Http\Controllers\AgendamentoParticipanteController;
 use App\Http\Controllers\AtividadeAcaoController;
 use App\Http\Controllers\AtividadeController;
+use App\Http\Controllers\AutorizacaoImagemImportController;
 use App\Http\Controllers\AvaliacaoAtividadeController;
+use App\Http\Controllers\AvaliacaoController;
 use App\Http\Controllers\CertificadoController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DimensaoController;
@@ -19,13 +19,16 @@ use App\Http\Controllers\IndicadorController;
 use App\Http\Controllers\InscricaoController;
 use App\Http\Controllers\ModeloCertificadoController;
 use App\Http\Controllers\MunicipioController;
+use App\Http\Controllers\ParticipantesExclusivosController;
 use App\Http\Controllers\PresencaController;
 use App\Http\Controllers\PresencaImportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestaoController;
 use App\Http\Controllers\RegiaoController;
+use App\Http\Controllers\RelatorioQuantitativoController;
 use App\Http\Controllers\TemplateAvaliacaoController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\UsuariosSemVinculoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -35,9 +38,11 @@ Route::get('/', function () {
 Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'home'])->middleware(['auth', 'verified'])->name('dashboard');
     Route::get('/dashboards/presencas', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboards.presencas');
+    Route::get('/dashboards/presencas/{atividade}/detalhes', [DashboardController::class, 'presencasDetalhes'])->middleware(['auth', 'verified'])->name('dashboards.presencas.detalhes');
     Route::get('/dashboard/export', [DashboardController::class, 'export'])->middleware(['auth', 'verified'])->name('dashboard.export');
     Route::get('/dashboards/avaliacoes', [DashboardController::class, 'avaliacoes'])->middleware(['auth', 'verified'])->name('dashboards.avaliacoes');
     Route::get('/dashboards/avaliacoes/dados', [DashboardController::class, 'avaliacoesData'])->middleware(['auth', 'verified'])->name('dashboards.avaliacoes.data');
+    Route::get('/dashboards/avaliacoes/pdf', [DashboardController::class, 'avaliacoesPdf'])->middleware(['auth', 'verified'])->name('dashboards.avaliacoes.pdf');
     Route::get('/dashboards/bi', [DashboardController::class, 'bi'])->middleware(['auth', 'verified'])->name('dashboards.bi');
 });
 
@@ -47,6 +52,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::post('/profile/demographics', [ProfileController::class, 'completeDemographics'])->name('profile.complete-demographics');
+    Route::post('/profile/photo-prompt', [ProfileController::class, 'storeProfilePhotoPrompt'])->name('profile.photo-prompt.store');
+    Route::post('/profile/photo-prompt/skip', [ProfileController::class, 'skipProfilePhotoPrompt'])->name('profile.photo-prompt.skip');
 
     Route::post('/eventos/{evento}/inscrever', [InscricaoController::class, 'inscrever'])->name('inscricoes.inscrever');
     Route::delete('/eventos/{evento}/cancelar', [InscricaoController::class, 'cancelar'])->name('inscricoes.cancelar');
@@ -73,8 +80,14 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
     Route::get('/atividades/{atividade}/lista-presenca-pdf', [AtividadeController::class, 'downloadListaPresencaPdf'])
         ->name('atividades.lista-presenca.pdf');
 
+    Route::get('/atividades/{atividade}/lista-presenca-simples-pdf', [AtividadeController::class, 'downloadListaPresencaSimplesView'])
+        ->name('atividades.lista-presenca-simples.pdf');
+
     Route::get('/atividades/{atividade}/lista-autorizacao-pdf', [AtividadeController::class, 'downloadListaAutorizacaoImagemPdf'])
         ->name('atividades.lista-autorizacao.pdf');
+
+    Route::get('/atividades/{atividade}/diario', [AtividadeController::class, 'diario'])->name('atividades.diario');
+    Route::post('/atividades/{atividade}/diario', [AtividadeController::class, 'salvarDiario'])->name('atividades.diario.salvar');
 });
 
 Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
@@ -107,17 +120,40 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('questaos', QuestaoController::class);
         Route::resource('templates-avaliacao', TemplateAvaliacaoController::class)
             ->parameters(['templates-avaliacao' => 'template']);
+        Route::prefix('avaliacoes-universais')
+            ->name('avaliacoes-universais.')
+            ->controller(AvaliacaoController::class)
+            ->group(function () {
+                Route::get('/', 'universaisIndex')->name('index');
+                Route::get('/create', 'universaisCreate')->name('create');
+                Route::post('/', 'universaisStore')->name('store');
+                Route::get('/{avaliacao}', 'universaisShow')->name('show');
+                Route::get('/{avaliacao}/edit', 'universaisEdit')->name('edit');
+                Route::put('/{avaliacao}', 'universaisUpdate')->name('update');
+                Route::delete('/{avaliacao}', 'universaisDestroy')->name('destroy');
+                Route::patch('/{avaliacao}/status-formulario', 'universaisToggleFormulario')->name('toggle-formulario');
+                Route::get('/{avaliacao}/link-qrcode', 'universaisLinkQrCode')->name('link-qrcode');
+            });
         Route::resource('avaliacoes', AvaliacaoController::class)
             ->parameters(['avaliacoes' => 'avaliacao']);
+        Route::get('avaliacoes/{avaliacao}/transcricao', [AvaliacaoController::class, 'transcricao'])->name('avaliacoes.transcricao');
+        Route::post('avaliacoes/{avaliacao}/transcricao', [AvaliacaoController::class, 'transcricaoBusca'])->name('avaliacoes.transcricao.busca');
+        Route::post('avaliacoes/{avaliacao}/transcricao/cadastrar', [AvaliacaoController::class, 'transcricaoCadastrar'])->name('avaliacoes.transcricao.cadastrar');
+        Route::get('avaliacoes-usuarios/sugestoes', [AvaliacaoController::class, 'usuariosSugestao'])->name('avaliacoes.usuarios.sugestoes');
         Route::get('avaliacoes/{avaliacao}/respostas', [AvaliacaoController::class, 'respostas'])->name('avaliacoes.respostas');
         Route::get('avaliacoes/{avaliacao}/respostas/{submissao}', [AvaliacaoController::class, 'respostasMostrar'])->name('avaliacoes.respostas.mostrar');
+        Route::get('avaliacoes/{avaliacao}/ficha-pdf', [AvaliacaoController::class, 'downloadFichaPdf'])->name('avaliacoes.ficha-pdf');
         Route::get('atividades/{atividade}/avaliacoes', [AvaliacaoController::class, 'resultadosAtividade'])->name('atividades.avaliacoes');
         Route::get('atividades/{atividade}/avaliacoes/pdf', [AvaliacaoController::class, 'downloadResultadosPdf'])->name('atividades.avaliacoes.pdf');
+    });
+
+    Route::middleware(['role:administrador|gerente|eq_pedagogica'])->group(function () {
         Route::get('agendamentos/efetivacoes', [AgendamentoEfetivacaoController::class, 'index'])->name('agendamentos.efetivacoes.index');
         Route::get('agendamentos/efetivados', [AgendamentoEfetivacaoController::class, 'efetivados'])->name('agendamentos.efetivados.index');
         Route::get('agendamentos/{agendamento}/efetivar', [AgendamentoEfetivacaoController::class, 'create'])->name('agendamentos.efetivacoes.create');
         Route::post('agendamentos/{agendamento}/efetivar/confirmar', [AgendamentoEfetivacaoController::class, 'confirm'])->name('agendamentos.efetivacoes.confirm');
         Route::post('agendamentos/{agendamento}/efetivar', [AgendamentoEfetivacaoController::class, 'store'])->name('agendamentos.efetivacoes.store');
+
     });
 
     // ROTAS ABAIXO SME PODEM ACESSAR, POR ISSO A DIVISÃO
@@ -177,6 +213,13 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
         Route::get('verificar', [UserManagementController::class, 'verificarIndex'])->name('verificar.index');
         Route::post('verificar', [UserManagementController::class, 'verificarProcessar'])->name('verificar.processar');
         Route::get('verificar/exportar/{format}', [UserManagementController::class, 'verificarExportar'])->name('verificar.exportar');
+        Route::middleware('role:administrador|gerente')->group(function () {
+            Route::get('participantes-exclusivos', [ParticipantesExclusivosController::class, 'index'])->name('participantes-exclusivos.index');
+            Route::get('participantes-exclusivos/resultado', [ParticipantesExclusivosController::class, 'resultado'])->name('participantes-exclusivos.resultado');
+            Route::get('participantes-exclusivos/exportar', [ParticipantesExclusivosController::class, 'exportar'])->name('participantes-exclusivos.exportar');
+            Route::get('sem-vinculo', [UsuariosSemVinculoController::class, 'index'])->name('sem-vinculo.index');
+            Route::get('sem-vinculo/exportar', [UsuariosSemVinculoController::class, 'exportar'])->name('sem-vinculo.exportar');
+        });
         Route::get('{managedUser}/editar', [UserManagementController::class, 'edit'])->name('edit');
         Route::put('{managedUser}', [UserManagementController::class, 'update'])->name('update');
         Route::post('{managedUser}/redefinir-senha', [UserManagementController::class, 'resetPassword'])
@@ -185,7 +228,7 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
         Route::post('certificados/emitir', [CertificadoController::class, 'emitirPorParticipantes'])->name('certificados.emitir');
         Route::get('exportar', [UserManagementController::class, 'export'])->name('export');
         Route::get('autorizacoes-imagem/importar', [AutorizacaoImagemImportController::class, 'import'])->name('autorizacoes.import');
-        Route::post('autorizacoes-imagem/importar', [\App\Http\Controllers\AutorizacaoImagemImportController::class, 'upload'])->name('autorizacoes.upload');
+        Route::post('autorizacoes-imagem/importar', [AutorizacaoImagemImportController::class, 'upload'])->name('autorizacoes.upload');
         Route::get('autorizacoes-imagem/preview', [AutorizacaoImagemImportController::class, 'preview'])->name('autorizacoes.preview');
         Route::post('autorizacoes-imagem/confirmar', [AutorizacaoImagemImportController::class, 'confirmar'])->name('autorizacoes.confirmar');
     });
@@ -193,9 +236,11 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
 Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
     Route::get('/eventos/{evento}/relatorios', [EventoController::class, 'relatorios'])
         ->name('eventos.relatorios');
+    Route::get('/eventos/{evento}/avaliacoes/consolidado', [EventoController::class, 'avaliacoesConsolidadas'])
+        ->name('eventos.avaliacoes.consolidado');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
     Route::controller(AvaliacaoAtividadeController::class)
         ->prefix('atividades/{atividade}/relatorio')
         ->name('avaliacao-atividade.')
@@ -211,7 +256,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('avaliacao-atividade.download');
 });
 
-Route::middleware(['auth', 'role:administrador|gerente'])->group(function () {
+Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
     Route::get('/relatorios-avaliacao', [AvaliacaoAtividadeController::class, 'index'])
         ->name('avaliacao-atividade.index');
 
@@ -220,6 +265,17 @@ Route::middleware(['auth', 'role:administrador|gerente'])->group(function () {
 
     Route::get('/atividades/{atividade}/relatorios-avaliacao/pdf-consolidado', [AvaliacaoAtividadeController::class, 'baixarTodosPorAtividade'])
         ->name('avaliacao-atividade.download-all');
+});
+
+Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
+    Route::get('/relatorio-quantitativo', [RelatorioQuantitativoController::class, 'index'])
+        ->name('relatorio-quantitativo.index');
+    Route::get('/relatorio-quantitativo/momentos', [RelatorioQuantitativoController::class, 'momentos'])
+        ->name('relatorio-quantitativo.momentos');
+    Route::get('/relatorio-quantitativo/exportar-momento', [RelatorioQuantitativoController::class, 'exportarMomento'])
+        ->name('relatorio-quantitativo.exportar-momento');
+    Route::get('/relatorio-quantitativo/exportar-total-geral', [RelatorioQuantitativoController::class, 'exportarTotalGeral'])
+        ->name('relatorio-quantitativo.exportar-total-geral');
 });
 
 Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador'])->group(function () {
@@ -262,6 +318,7 @@ Route::middleware(['auth', 'role:administrador|gerente'])->group(function () {
 
 Route::get('/formulario-avaliacao/{avaliacao}', [AvaliacaoController::class, 'formularioAvaliacao'])->name('avaliacao.formulario');
 Route::post('/formulario-avaliacao/{avaliacao}', [AvaliacaoController::class, 'responderFormulario'])->name('avaliacao.formulario.responder');
+Route::get('/formulario-avaliacao/{avaliacao}/obrigado', [AvaliacaoController::class, 'formularioAvaliacaoObrigado'])->name('avaliacao.formulario.obrigado');
 Route::get('/validacao/{codigo}', [CertificadoController::class, 'validar'])->name('certificados.validacao');
 
 require __DIR__.'/auth.php';
