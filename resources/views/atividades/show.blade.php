@@ -52,7 +52,22 @@
         <div class="d-flex justify-content-between align-items-start mb-4">
             <x-header-atividade :atividade="$atividade" />
 
-            <div class="d-flex flex-wrap gap-2 mb-3">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+                {{-- Alerta de dados demográficos pendentes --}}
+                @if (session('erro_demograficos'))
+                    <div class="w-100 mb-2">
+                        <div class="alert alert-warning d-flex align-items-start gap-2 mb-0" role="alert">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1" viewBox="0 0 16 16">
+                                <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767L8.982 1.566zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+                            </svg>
+                            <div>
+                                <strong>Dados demográficos pendentes!</strong><br>
+                                {{ session('erro_demograficos') }}
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Ação Principal (Sempre visível para o usuário final) --}}
                 @auth
                     <form action="{{ route('atividades.presenca.checkin', $atividade) }}" method="POST" class="d-inline">
@@ -166,56 +181,54 @@
                     $lista = $atividade->presencas()->with([
                     'inscricao.participante.user:id,name,email',
                     'inscricao.participante.municipio.estado:id,nome,sigla'
-                    ])->orderByDesc('id')->paginate(25);
+                    ])->orderByDesc('id')->get();
+
+                    $statusBadges = [
+                        'ouvinte'     => '<span class="badge bg-info">Ouvinte</span>',
+                        'presente'    => '<span class="badge bg-success">Presente</span>',
+                        'ausente'     => '<span class="badge bg-secondary">Ausente</span>',
+                        'justificado' => '<span class="badge bg-warning text-dark">Justificado</span>',
+                    ];
+
+                    $columns = [
+                        ['field' => 'nome', 'headerName' => 'Nome', 'flex' => 2],
+                        ['field' => 'email', 'headerName' => 'E-mail', 'flex' => 2],
+                        ['field' => 'municipio', 'headerName' => 'Município', 'flex' => 2],
+                        ['field' => 'status', 'headerName' => 'Status', 'minWidth' => 140, 'html' => true],
+                        ['field' => 'marcado_em', 'headerName' => 'Marcado em', 'minWidth' => 140],
+                    ];
+
+                    $rows = $lista->map(function ($pr) use ($statusBadges) {
+                        $p = $pr->inscricao->participante ?? null;
+                        $u = $p?->user;
+                        $m = $p?->municipio;
+                        $uf = $m?->estado?->sigla;
+                        $munLabel = $m ? ($m->nome . ($uf ? " - $uf" : "")) : '—';
+                        $status = ($pr->inscricao?->ouvinte ?? false) ? 'ouvinte' : ($pr->status_participacao ?? $pr->status ?? null);
+
+                        return [
+                            'id' => $pr->id,
+                            'nome' => $u->name ?? '—',
+                            'email' => $u->email ?? '—',
+                            'municipio' => $munLabel,
+                            'status' => $statusBadges[$status] ?? '<span class="badge bg-light text-muted">—</span>',
+                            'marcado_em' => optional($pr->created_at)->format('d/m/Y H:i') ?? '—',
+                        ];
+                    })->values();
                 @endphp
 
-                @if($lista->count() === 0)
+                @if($lista->isEmpty())
                     <div class="ev-card p-3 text-muted">Nenhuma presença registrada para este momento.</div>
                 @else
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered align-middle bg-white">
-                            <thead class="table-light">
-                            <tr>
-                                <th>Nome</th>
-                                <th>E-mail</th>
-                                <th>Município</th>
-                                <th style="min-width:140px;">Status</th>
-                                <th style="min-width:140px;">Marcado em</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($lista as $pr)
-                                @php
-                                    $p = $pr->inscricao->participante ?? null;
-                                    $u = $p?->user;
-                                    $m = $p?->municipio;
-                                    $uf = $m?->estado?->sigla;
-                                    $munLabel = $m ? ($m->nome . ($uf ? " - $uf" : "")) : '—';
-                                    $status = ($pr->inscricao?->ouvinte ?? false) ? 'ouvinte' : ($pr->status_participacao ?? $pr->status ?? null);
-                                @endphp
-                                <tr>
-                                    <td>{{ $u->name ?? '—' }}</td>
-                                    <td>{{ $u->email ?? '—' }}</td>
-                                    <td>{{ $munLabel }}</td>
-                                    <td>
-                                        @switch($status)
-                                            @case('ouvinte') <span class="badge bg-info">Ouvinte</span> @break
-                                            @case('presente') <span class="badge bg-success">Presente</span> @break
-                                            @case('ausente') <span class="badge bg-secondary">Ausente</span> @break
-                                            @case('justificado') <span class="badge bg-warning text-dark">Justificado</span> @break
-                                            @default <span class="badge bg-light text-muted">—</span>
-                                        @endswitch
-                                    </td>
-                                    <td>{{ optional($pr->updated_at ?? $pr->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="small text-muted">Exibindo {{ $lista->count() }} de {{ $lista->total() }}</div>
-                        {{ $lista->links() }}
+                    <div class="card shadow-sm">
+                        <div class="card-body p-0">
+                            <x-data-table
+                                id="grid-presencas-{{ $atividade->id }}"
+                                :columns="$columns"
+                                :rows="$rows"
+                                :page-size="25"
+                            />
+                        </div>
                     </div>
                 @endif
             </div>

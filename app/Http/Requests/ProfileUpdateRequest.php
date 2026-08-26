@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Participante;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -33,10 +34,16 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         $userId = $this->user()->id ?? null;
+        $sistemaOrigem = $this->user()->sistema_origem ?? User::SISTEMA_ENGAJA;
 
         return [
             'name'         => ['required', 'string', 'max:255'],
-            'email'        => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+            'email'        => [
+                'required', 'email', 'max:255',
+                Rule::unique('users', 'email')
+                    ->where('sistema_origem', $sistemaOrigem)
+                    ->ignore($userId),
+            ],
             'cpf'          => ['required', 'digits:11'],
             'telefone'     => ['nullable', 'regex:/^\d{10,11}$/'],
             'municipio_id' => ['nullable', 'exists:municipios,id'],
@@ -86,8 +93,11 @@ class ProfileUpdateRequest extends FormRequest
             return false;
         }
 
+        $sistemaOrigem = $this->user()?->sistema_origem ?? \App\Models\User::SISTEMA_ENGAJA;
+
         return Participante::query()
             ->whereNotNull('cpf')
+            ->whereHas('user', fn ($query) => $query->where('sistema_origem', $sistemaOrigem))
             ->when($ignorarId, fn($q) => $q->where('id', '!=', $ignorarId))
             ->whereRaw("regexp_replace(cpf, '[^0-9]', '', 'g') = ?", [$cpf])
             ->exists();

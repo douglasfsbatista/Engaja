@@ -22,20 +22,35 @@ class AtividadeController extends Controller
 {
     use AuthorizesRequests;
 
-    public function index(Evento $evento)
+    public function index(Request $request, Evento $evento)
     {
         $userId = auth()->id();
+
+        $municipiosDisponiveis = Municipio::whereHas('atividades', fn ($q) => $q->where('evento_id', $evento->id))
+            ->with('estado')
+            ->orderBy('nome')
+            ->get();
+
+        $temAbrangenciaNacional = $evento->atividades()
+            ->where('abrangencia_nacional', true)
+            ->exists();
 
         $atividades = $evento->atividades()
             ->with([
                 'municipios.estado',
                 'avaliacaoAtividades' => fn ($rel) => $rel->when($userId, fn ($query) => $query->where('user_id', $userId)),
             ])
+            ->when($request->input('municipio_id') === 'brasil', fn ($q) => $q->where('abrangencia_nacional', true))
+            ->when($request->filled('municipio_id') && $request->input('municipio_id') !== 'brasil', fn ($q) => $q->whereHas(
+                'municipios',
+                fn ($q2) => $q2->where('municipios.id', $request->municipio_id)
+            ))
             ->orderByDesc('dia')
             ->orderByDesc('hora_inicio')
-            ->paginate(12);
+            ->paginate(12)
+            ->appends($request->query());
 
-        return view('atividades.index', compact('evento', 'atividades'));
+        return view('atividades.index', compact('evento', 'atividades', 'municipiosDisponiveis', 'temAbrangenciaNacional'));
     }
 
     public function create(Evento $evento)
@@ -97,6 +112,7 @@ class AtividadeController extends Controller
         $dados = $request->validate([
             'municipios' => 'nullable|array',
             'municipios.*' => 'exists:municipios,id',
+            'abrangencia_nacional' => 'nullable|boolean',
             'descricao' => 'required|string',
             'dia' => 'required|date',
             'hora_inicio' => 'required|date_format:H:i',
@@ -125,6 +141,11 @@ class AtividadeController extends Controller
 
         $municipiosSelecionados = $dados['municipios'] ?? [];
         unset($dados['municipios']);
+
+        $dados['abrangencia_nacional'] = $request->boolean('abrangencia_nacional');
+        if ($dados['abrangencia_nacional']) {
+            $municipiosSelecionados = [];
+        }
 
         // Mantém o campo legado municipio_id preenchido com o primeiro selecionado (para compatibilidade).
         $dados['municipio_id'] = $municipiosSelecionados[0] ?? null;
@@ -176,6 +197,7 @@ class AtividadeController extends Controller
         $dados = $request->validate([
             'municipios' => 'nullable|array',
             'municipios.*' => 'exists:municipios,id',
+            'abrangencia_nacional' => 'nullable|boolean',
             'descricao' => 'required|string',
             'dia' => 'required|date',
             'hora_inicio' => 'required|date_format:H:i',
@@ -204,6 +226,11 @@ class AtividadeController extends Controller
 
         $municipiosSelecionados = $dados['municipios'] ?? [];
         unset($dados['municipios']);
+
+        $dados['abrangencia_nacional'] = $request->boolean('abrangencia_nacional');
+        if ($dados['abrangencia_nacional']) {
+            $municipiosSelecionados = [];
+        }
 
         $dados['municipio_id'] = $municipiosSelecionados[0] ?? null;
 
@@ -290,6 +317,10 @@ class AtividadeController extends Controller
         }
 
         $user = auth()->user();
+
+        if (! $user->demograficosCompletos()) {
+            return back()->with('erro_demograficos', 'Para confirmar sua presença, é necessário preencher seus dados demográficos no Engaja. Por favor, preencha o formulário acima e tente novamente.');
+        }
 
         // 1) Garante Participante para o usuário
         $participante = Participante::firstOrCreate(['user_id' => $user->id], []);
@@ -454,6 +485,7 @@ class AtividadeController extends Controller
         $inscricoes = $atividade->inscricoes()->with([
             'participante.user',
             'participante.municipio.estado',
+            'presencas' => fn ($q) => $q->where('atividade_id', $atividade->id),
         ])->get()->sortBy(function ($inscricao) {
             return Str::ascii(mb_strtolower($inscricao->participante->user->name ?? ''));
         })->values();

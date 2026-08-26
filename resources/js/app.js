@@ -2,14 +2,18 @@ import "./bootstrap";
 import "../css/graficos.css";
 import "./graficos-ranking-municipios";
 import "./graficos-distribuicao-dimensoes";
+import "./lib/ag-grid-table";
 import "tom-select/dist/css/tom-select.bootstrap5.min.css";
 import TomSelect from "tom-select";
 
 // import bundle com Popper e exporta classes Bootstrap
 import * as bootstrap from "bootstrap";
+import Quill from "quill";
+import "quill/dist/quill.snow.css";
 
 window.bootstrap = bootstrap;
 window.TomSelect = TomSelect;
+window.Quill = Quill;
 
 const loadMultiSelectsIfNeeded = () => {
     document.querySelectorAll("[data-multiselect]").forEach((el) => {
@@ -95,6 +99,15 @@ const loadFabricIfNeeded = () => {
     });
 };
 
+// Carrega o pdf.js apenas nas telas de Cartas que exibem uma carta em PDF
+const loadCartasPdfIfNeeded = () => {
+    if (!document.querySelector(".cpe-letter-doc[data-pdf-src]")) {
+        return;
+    }
+
+    import("./cartas-pdf-viewer");
+};
+
 if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", loadMultiSelectsIfNeeded, {
         once: true,
@@ -105,10 +118,14 @@ if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", loadFabricIfNeeded, {
         once: true,
     });
+    document.addEventListener("DOMContentLoaded", loadCartasPdfIfNeeded, {
+        once: true,
+    });
 } else {
     loadMultiSelectsIfNeeded();
     loadReportMomentSelectIfNeeded();
     loadFabricIfNeeded();
+    loadCartasPdfIfNeeded();
 }
 
 let confirmModalInstance;

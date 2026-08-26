@@ -204,10 +204,14 @@
         @endif
 
         <a href="{{ route('eventos.planejamento.pdf', $evento) }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary">
-          <i class="fas fa-file-pdf"></i> Ver Planejamento da Ação
+          <i class="fas fa-file-pdf"></i> Ver planejamento da ação
         </a>
 
-        @hasanyrole('administrador|gerente|eq_pedagogica|articulador')
+        <a href="{{ route('eventos.planejamento.pdf', ['evento' => $evento, 'formato' => 'docx']) }}" class="btn btn-outline-secondary">
+          <i class="bi bi-file-earmark-word"></i> Planejamento (Word)
+        </a>
+
+        @hasanyrole('administrador|gerente|eq_pedagogica')
           <a href="{{ route('inscricoes.selecionar', $evento)}}" class="btn btn-engaja">Inscrever participantes</a>
         @endhasanyrole
 
@@ -215,14 +219,14 @@
           <a href="{{ route('inscricoes.inscritos', $evento) }}" class="btn btn-outline-secondary">Ver inscritos</a>
         @endcan
 
-        @if($mostrarMenuGerenciar)
+          @if($mostrarMenuGerenciar)
           <div class="dropdown">
             <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="dropdownGerenciarEvento"
               data-bs-toggle="dropdown" aria-expanded="false">
               Gerenciar
             </button>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownGerenciarEvento">
-              @hasanyrole('administrador|gerente|eq_pedagogica|articulador')
+              @hasanyrole('administrador|gerente|eq_pedagogica')
                 <li>
                   <a class="dropdown-item" href="{{ route('inscricoes.import', $evento)}}">Importar participantes</a>
                 </li>
@@ -235,21 +239,22 @@
                 <li><hr class="dropdown-divider"></li>
                 <li>
                   <a class="dropdown-item" href="{{ route('dashboards.presencas', ['evento_id' => $evento->id]) }}">
-                    Relação de Inscritos/Presentes da Ação
+                    Relação de presentes/ausentes na ação
                   </a>
                 </li>
                 <li>
+                  @hasanyrole('administrador|gerente|eq_pedagogica')
                   <a class="dropdown-item" href="{{ route('eventos.avaliacoes.consolidado', $evento) }}">
                     Consolidação de avaliações
                   </a>
+                  @endhasrole
                 </li>
                 <li>
                   <button type="button" class="dropdown-item" data-bs-toggle="modal"
                     data-bs-target="#modalRelatoriosEvento">
-                    Relatórios
+                    Relatórios de participantes
                   </button>
                 </li>
-              @endrole
 
               @hasanyrole('administrador|gerente')
                 <li>
@@ -258,6 +263,15 @@
                   </a>
                 </li>
               @endhasanyrole
+
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <button type="button" class="dropdown-item"
+                  data-bs-toggle="modal" data-bs-target="#modalCronogramaAgrupamento">
+                  <i class="fas fa-file-pdf text-danger me-1"></i>Cronograma da ação
+                </button>
+              </li>
+              @endrole
 
               @can('update', $evento)
                 <li><hr class="dropdown-divider"></li>
@@ -429,9 +443,11 @@
 
               $momento = trim($at->descricao ?? '') !== '' ? $at->descricao : 'Momento';
               $local = $at->local ?? null;
-              $municipio = $at->municipios->isNotEmpty()
-                ? $at->municipios->map(fn($m) => $m->nome_com_estado ?? $m->nome)->join(', ')
-                : null;
+              $municipio = $at->abrangencia_nacional
+                ? 'Brasil'
+                : ($at->municipios->isNotEmpty()
+                  ? $at->municipios->map(fn($m) => $m->nome_com_estado ?? $m->nome)->join(', ')
+                  : null);
               $publicoEsperado = $at->publico_esperado;
               $cargaHoraria = $at->carga_horaria;
               $cargaLabel = !is_null($cargaHoraria) ? \App\Support\CargaHoraria::formatMinutos((int) $cargaHoraria) : null;
@@ -568,6 +584,10 @@
                   class="btn btn-outline-secondary w-100">
                   Baixar XLSX sem ouvintes
                 </a>
+                <a href="{{ route('eventos.relatorios', ['evento' => $evento, 'tipo' => 'geral', 'formato' => 'docx']) }}"
+                  class="btn btn-outline-primary w-100">
+                  <i class="bi bi-file-earmark-word"></i> Baixar Word
+                </a>
               </div>
             </div>
           </div>
@@ -584,6 +604,10 @@
                   class="btn btn-outline-secondary w-100">
                   Baixar XLSX sem ouvintes
                 </a>
+                <a href="{{ route('eventos.relatorios', ['evento' => $evento, 'tipo' => 'momentos', 'formato' => 'docx']) }}"
+                  class="btn btn-outline-primary w-100">
+                  <i class="bi bi-file-earmark-word"></i> Baixar Word
+                </a>
               </div>
             </div>
           </div>
@@ -597,7 +621,43 @@
 </div>
 @endhasanyrole
 
+{{-- Modal: seleção de agrupamento do cronograma --}}
+@role('administrador|gerente|eq_pedagogica|articulador')
+<div class="modal fade" id="modalCronogramaAgrupamento" tabindex="-1"
+  aria-labelledby="modalCronogramaAgrupamentoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold" id="modalCronogramaAgrupamentoLabel">
+          <i class="fas fa-file-pdf text-danger me-2"></i>Cronograma da Ação
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">
+          Escolha como os momentos devem ser organizados no cronograma:
+        </p>
+        <div class="d-grid gap-2">
+          <a href="{{ route('eventos.cronograma.pdf', ['evento' => $evento, 'agrupamento' => 'data']) }}"
+            class="btn btn-engaja">
+            <i class="fas fa-calendar-day me-2"></i>Agrupar por Data
+          </a>
+          <a href="{{ route('eventos.cronograma.pdf', ['evento' => $evento, 'agrupamento' => 'municipio']) }}"
+            class="btn btn-outline-engaja" style="border: 1px solid #dee2e6;">
+            <i class="fas fa-map-marker-alt me-2"></i>Agrupar por Município
+          </a>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+@endrole
+
 {{-- Instância do Modal de Pré-ação --}}
+
 <x-checklist-modal
     id="modalChecklistPreAcao"
     title="Checklist de Planejamento"
