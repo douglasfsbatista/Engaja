@@ -113,8 +113,8 @@ class CertificadoController extends Controller
                 $map = [
                     '%participante%' => $participante->user->name,
                     '%acao%' => $eventoNomeFormatado,
-                    '%carga_horaria%' => CargaHoraria::formatMinutosCompacto($cargaTotal),
-                    '%cpf%' => $participante->cpf ?? '',
+                    '%carga_horaria%' => CargaHoraria::formatMinutos($cargaTotal),
+                    '%cpf%' => $this->formatarCpf($participante->cpf),
                 ];
 
                 $textoFrente = $this->renderPlaceholders($modelo->texto_frente ?? '', $map);
@@ -192,8 +192,8 @@ class CertificadoController extends Controller
                     $map = [
                         '%participante%' => $participante->user->name,
                         '%acao%' => $evento->nome,
-                        '%carga_horaria%' => CargaHoraria::formatMinutosCompacto($cargaTotal),
-                        '%cpf%' => $participante->cpf ?? '',
+                        '%carga_horaria%' => CargaHoraria::formatMinutos($cargaTotal),
+                        '%cpf%' => $this->formatarCpf($participante->cpf),
                     ];
 
                     $textoFrente = $this->renderPlaceholders($modelo->texto_frente ?? '', $map);
@@ -476,8 +476,8 @@ class CertificadoController extends Controller
                 $map = [
                     '%participante%' => $participante->user->name,
                     '%acao%' => $evento->nome,
-                    '%carga_horaria%' => CargaHoraria::formatMinutosCompacto($cargaTotal),
-                    '%cpf%' => $participante->cpf ?? '',
+                    '%carga_horaria%' => CargaHoraria::formatMinutos($cargaTotal),
+                    '%cpf%' => $this->formatarCpf($participante->cpf),
                 ];
 
                 $textoFrente = $this->renderPlaceholders($modelo->texto_frente ?? '', $map);
@@ -523,6 +523,21 @@ class CertificadoController extends Controller
     private function renderPlaceholders(string $texto, array $map): string
     {
         return strtr($texto, $map);
+    }
+
+    private function formatarCpf(?string $cpf): string
+    {
+        $digits = preg_replace('/\D+/', '', (string) $cpf);
+
+        if (strlen($digits) !== 11) {
+            return $cpf ?? '';
+        }
+
+        return (string) preg_replace(
+            '/^(\d{3})(\d{3})(\d{3})(\d{2})$/',
+            '$1.$2.$3-$4',
+            $digits
+        );
     }
 
     public function show(Certificado $certificado)
@@ -899,7 +914,7 @@ class CertificadoController extends Controller
         $map = [
             '%participante%' => '[NOME DO PARTICIPANTE]',
             '%acao%' => '[NOME DA AÇÃO PEDAGÓGICA]',
-            '%carga_horaria%' => CargaHoraria::formatMinutosCompacto(600),
+            '%carga_horaria%' => CargaHoraria::formatMinutos(600),
             '%cpf%' => '[CPF DO PARTICIPANTE]',
         ];
 
