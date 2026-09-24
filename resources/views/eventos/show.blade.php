@@ -537,7 +537,7 @@
                       @hasanyrole('administrador|gerente')
                         @if (($at->presencas_count ?? 0) > 0)
                           <button type="button" class="btn btn-sm btn-outline-danger"
-                                  data-blocked-delete="Este momento possui {{ $at->presencas_count == 1 ? '1 presença registrada' : $at->presencas_count . ' presenças registradas' }} e não pode ser excluído. Remova as presenças antes de tentar excluir."
+                                  data-blocked-delete="Este momento possui {{ $at->presencas_count == 1 ? '1 presença registrada' : $at->presencas_count . ' presenças registradas' }} e não pode ser excluído."
                                   data-blocked-delete-title="Momento possui presenças associadas">
                             🗑️ Excluir
                           </button>
