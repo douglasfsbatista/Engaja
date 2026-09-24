@@ -91,7 +91,7 @@
                     $presencasCount = (int) ($at->presencas_count ?? 0);
                     if ($presencasCount > 0) {
                         $presencasTexto = $presencasCount === 1 ? '1 presença registrada' : "{$presencasCount} presenças registradas";
-                        $msgBloqueio = "Este momento possui {$presencasTexto} e não pode ser excluído. Remova as presenças antes de tentar excluir.";
+                        $msgBloqueio = "Este momento possui {$presencasTexto} e não pode ser excluído.";
                         $acoesHtml .= '<button type="button" class="dropdown-item text-danger" data-blocked-delete="' . e($msgBloqueio) . '" data-blocked-delete-title="Momento possui presenças associadas">Excluir</button>';
                     } else {
                         $acoesHtml .= '<form method="POST" action="' . route('atividades.destroy', $at) . '" data-confirm="Tem certeza que deseja excluir este momento?">'
