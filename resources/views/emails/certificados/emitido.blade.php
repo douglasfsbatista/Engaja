@@ -105,7 +105,7 @@
     <div class="card">
         <h1>Olá, {{ $nome }}!</h1>
 
-        <p>O seu certificado referente à ação pedagógica <strong>{{ $acao }}</strong> já está liberado e disponível para download na plataforma Engaja. Para acessar seu certificado, clique no botão abaixo:</p>
+        <p>O seu certificado emitido pelo projeto <strong>ALFA-EJA Brasil</strong>, já está liberado e disponível para download na plataforma Engaja. Para acessar seu certificado, clique no botão abaixo:</p>
 
         <div style="text-align: center;">
             <a class="btn" href="{{ $url }}" style="color: #ffffff !important; text-decoration: none;">Acessar meus certificados</a>
@@ -116,9 +116,9 @@
         </p>
 
         <div class="info-box">
-            <div class="info-box-title">📌 Instruções Importantes de Acesso</div>
+            <div class="info-box-title">📌 Instruções importantes de acesso</div>
             <p>Caso seja o seu primeiro acesso ao sistema, utilize este seu exato e-mail e a senha temporária <span class="password-highlight">alfaeja2025</span> para entrar.</p>
-            <p style="margin-top: 12px;">Se a senha temporária não funcionar, não se preocupe! Na tela de login, clique na opção <strong>"Esqueceu sua senha?"</strong> e insira este seu e-mail para criar uma nova senha com segurança.</p>
+            <p style="margin-top: 12px;">Se a senha temporária não funcionar, não se preocupe! Na tela de login, clique na opção <strong>"Esqueceu a senha?"</strong> e insira este seu e-mail para criar uma nova senha com segurança.</p>
         </div>
         <hr>
 
