@@ -51,11 +51,19 @@ Route::prefix('cartas')->name('cartas.')->group(function () {
 
     Route::get('/', [CartasAuthController::class, 'apresentacao'])->name('apresentacao');
 
+    Route::get('/formulario-avaliacao/{avaliacao}', [AvaliacaoController::class, 'formularioAvaliacao'])->name('avaliacao.formulario');
+    Route::post('/formulario-avaliacao/{avaliacao}', [AvaliacaoController::class, 'responderFormulario'])->name('avaliacao.formulario.responder');
+    Route::get('/formulario-avaliacao/{avaliacao}/obrigado', [AvaliacaoController::class, 'formularioAvaliacaoObrigado'])->name('avaliacao.formulario.obrigado');
+
     Route::middleware('guest')->group(function () {
         Route::get('/login', [CartasAuthController::class, 'login'])->name('login');
         Route::post('/login', [CartasAuthController::class, 'authenticate'])->name('login.store');
         Route::get('/cadastro', [CartasAuthController::class, 'register'])->name('register');
-        Route::post('/cadastro', [CartasAuthController::class, 'storeRegister'])->name('register.store');
+        Route::post('/cadastro', [CartasAuthController::class, 'storeRegister'])
+            ->middleware('throttle:6,1')
+            ->name('register.store');
+        Route::get('/cadastro/verificar-reativacao', [CartasAuthController::class, 'reactivationPending'])
+            ->name('register.reactivate.pending');
         Route::get('/recuperar-senha', [CartasAuthController::class, 'forgotPassword'])->name('password.request');
         Route::post('/recuperar-senha', [CartasAuthController::class, 'sendResetLink'])->name('password.email');
         Route::get('/resetar-senha/{token}', [CartasAuthController::class, 'resetPassword'])->name('password.reset');
@@ -70,6 +78,15 @@ Route::prefix('cartas')->name('cartas.')->group(function () {
     Route::get('/verificar-email/{id}/{hash}', VerifyEmailController::class)
         ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
+
+    /*
+     * Confirmação de reativação de conta desativada (ver AuthController::
+     * requestReactivation). Aberta e sem sessão pelo mesmo motivo da rota
+     * acima: a identidade vem só da assinatura da URL.
+     */
+    Route::get('/cadastro/reativar/{user}', [CartasAuthController::class, 'confirmReactivation'])
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('register.reactivate');
 
     Route::middleware('auth')->group(function () {
         Route::get('/verificar-email', [CartasAuthController::class, 'verificationNotice'])->name('verification.notice');
@@ -95,6 +112,7 @@ Route::prefix('cartas')->name('cartas.')->group(function () {
             Route::get('/mensagens/{mensagem}/preview', [CartasCartaController::class, 'preview'])->name('mensagens.preview');
             Route::get('/mensagens/{mensagem}/download', [CartasCartaController::class, 'download'])->name('mensagens.download');
             Route::post('/diagnostico/visualizador', [CartasViewerDiagnosticController::class, 'store'])->name('diagnostico.visualizador');
+            Route::post('/usuarios/{managedUser}/enviar-avaliacao', [CartasUserManagementController::class, 'enviarAvaliacao'])->name('usuarios.enviar-avaliacao');
         });
     });
 });
@@ -294,6 +312,9 @@ Route::middleware(['auth', 'role:administrador|gerente|eq_pedagogica|articulador
         });
         Route::get('{managedUser}/editar', [UserManagementController::class, 'edit'])->name('edit');
         Route::put('{managedUser}', [UserManagementController::class, 'update'])->name('update');
+        Route::delete('{managedUser}', [UserManagementController::class, 'destroy'])
+            ->middleware('role:administrador|gerente')
+            ->name('destroy');
         Route::post('{managedUser}/redefinir-senha', [UserManagementController::class, 'resetPassword'])
             ->middleware('role:administrador')
             ->name('password.reset');
